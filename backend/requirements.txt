@@ -4,3 +4,5 @@ pydantic>=2.8.0
 python-dotenv
 pymongo==4.7.3
 black
+passlib[bcrypt]
+python-jose
