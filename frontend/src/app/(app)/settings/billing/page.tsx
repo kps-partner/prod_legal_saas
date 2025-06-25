@@ -52,7 +52,14 @@ export default function BillingPage() {
       window.location.href = response.url;
     } catch (error) {
       console.error('Failed to create customer portal session:', error);
-      alert('Failed to access billing portal. Please try again.');
+      
+      // Check if this is a customer portal configuration error
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('customer portal settings') || errorMessage.includes('No configuration provided')) {
+        alert('The billing portal is not yet configured. Please contact support or set up the customer portal in your Stripe Dashboard.');
+      } else {
+        alert('Failed to access billing portal. Please try again or contact support.');
+      }
     } finally {
       setLoading(false);
     }

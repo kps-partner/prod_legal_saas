@@ -73,30 +73,52 @@ async def create_checkout_session(price_id: str, current_user: User):
 async def create_customer_portal_session(current_user: User):
     """Create a Stripe customer portal session for the current user's firm."""
     try:
+        print(f"Creating customer portal session for user: {current_user.email}, firm_id: {current_user.firm_id}")
+        
         # Retrieve the firm from the database
         firm = db.firms.find_one({"_id": ObjectId(current_user.firm_id)})
         if not firm:
+            print(f"ERROR: Firm not found for ID: {current_user.firm_id}")
             raise HTTPException(status_code=404, detail="Firm not found")
+        
+        print(f"Found firm: {firm.get('name', 'Unknown')}")
         
         # Check if the firm has a stripe_customer_id
         stripe_customer_id = firm.get("stripe_customer_id")
         if not stripe_customer_id:
+            print(f"ERROR: No Stripe customer ID found for firm: {current_user.firm_id}")
             raise HTTPException(
                 status_code=400,
                 detail="No Stripe customer ID found for this firm. Please create a subscription first."
             )
         
+        print(f"Using Stripe customer ID: {stripe_customer_id}")
+        
         # Create the customer portal session
         portal_session = stripe.billing_portal.Session.create(
             customer=stripe_customer_id,
-            return_url="http://localhost:3000/dashboard",
+            return_url="http://localhost:3000/settings/billing",
         )
         
+        print(f"Successfully created customer portal session: {portal_session.id}")
         return portal_session
     except HTTPException:
         # Re-raise HTTP exceptions as-is
         raise
+    except stripe.error.InvalidRequestError as e:
+        error_msg = str(e)
+        print(f"Stripe InvalidRequestError: {error_msg}")
+        
+        # Check if this is the customer portal configuration error
+        if "No configuration provided" in error_msg and "customer portal settings" in error_msg:
+            raise HTTPException(
+                status_code=400,
+                detail="Customer portal is not configured. Please set up your customer portal settings in the Stripe Dashboard at https://dashboard.stripe.com/test/settings/billing/portal"
+            )
+        else:
+            raise HTTPException(status_code=400, detail=f"Stripe error: {error_msg}")
     except Exception as e:
+        print(f"ERROR creating customer portal session: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 async def cancel_subscription(current_user: User):
