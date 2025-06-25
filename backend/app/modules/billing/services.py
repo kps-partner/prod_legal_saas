@@ -9,22 +9,49 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 async def create_checkout_session(price_id: str, current_user: User):
     try:
-        # For testing without MongoDB, create a Stripe customer on-the-fly
-        # In production, this would use the firm's existing stripe_customer_id
+        # Get the firm and its stripe_customer_id
         try:
             firm = db.firms.find_one({"_id": ObjectId(current_user.firm_id)})
             customer_id = firm.get("stripe_customer_id") if firm else None
+            
+            # Check if the customer exists in Stripe (handle fallback customer IDs)
+            if customer_id and not customer_id.startswith("cus_"):
+                # This is a fallback customer ID, treat as if no customer exists
+                customer_id = None
+                
+            if customer_id:
+                try:
+                    # Verify the customer exists in Stripe
+                    stripe.Customer.retrieve(customer_id)
+                    print(f"Using existing Stripe customer: {customer_id}")
+                except stripe.error.InvalidRequestError:
+                    # Customer doesn't exist in Stripe, create a new one
+                    customer_id = None
+                    
         except Exception as db_error:
             print(f"Database connection failed: {db_error}")
-            print("Creating temporary Stripe customer for testing...")
-            # Create a temporary customer for testing
+            customer_id = None
+
+        # Create a new Stripe customer if needed
+        if not customer_id:
+            print("Creating new Stripe customer...")
             customer = stripe.Customer.create(
                 email=current_user.email,
-                name=f"Test Customer - {current_user.email}",
-                metadata={"test_mode": "true", "user_email": current_user.email}
+                name=f"{current_user.name} - {current_user.email}",
+                metadata={"user_email": current_user.email, "firm_id": current_user.firm_id}
             )
             customer_id = customer.id
-            print(f"Created temporary customer: {customer_id}")
+            print(f"Created new Stripe customer: {customer_id}")
+            
+            # Update the firm with the new customer ID
+            try:
+                db.firms.update_one(
+                    {"_id": ObjectId(current_user.firm_id)},
+                    {"$set": {"stripe_customer_id": customer_id}}
+                )
+                print(f"Updated firm {current_user.firm_id} with Stripe customer ID: {customer_id}")
+            except Exception as update_error:
+                print(f"Failed to update firm with customer ID: {update_error}")
 
         checkout_session = stripe.checkout.Session.create(
             line_items=[
@@ -40,6 +67,7 @@ async def create_checkout_session(price_id: str, current_user: User):
         )
         return checkout_session
     except Exception as e:
+        print(f"Error creating checkout session: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 async def create_customer_portal_session(current_user: User):

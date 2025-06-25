@@ -4,9 +4,26 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogOut, Building2, User, Mail, CreditCard } from 'lucide-react';
+import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
+  const searchParams = useSearchParams();
+
+  // Check if user returned from successful payment and refresh user data
+  useEffect(() => {
+    const success = searchParams.get('success');
+    if (success === 'true') {
+      // Refresh user data to get updated subscription status
+      refreshUser();
+      
+      // Clean up the URL by removing the success parameter
+      const url = new URL(window.location.href);
+      url.searchParams.delete('success');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams, refreshUser]);
 
   const handleLogout = () => {
     logout();
@@ -86,13 +103,34 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Quick Actions Card */}
+          {/* Subscription Status Card */}
           <Card>
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common tasks and shortcuts</CardDescription>
+              <CardTitle className="flex items-center">
+                <CreditCard className="h-5 w-5 mr-2" />
+                Subscription Status
+              </CardTitle>
+              <CardDescription>Current billing and subscription information</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Status:</span>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  user.subscription_status === 'active'
+                    ? 'bg-green-100 text-green-800'
+                    : user.subscription_status === 'past_due'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : user.subscription_status === 'incomplete'
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {user.subscription_status === 'active' ? 'Active' :
+                   user.subscription_status === 'past_due' ? 'Past Due' :
+                   user.subscription_status === 'incomplete' ? 'Incomplete' :
+                   user.subscription_status === 'inactive' ? 'Inactive' :
+                   user.subscription_status || 'Unknown'}
+                </span>
+              </div>
               <Button
                 variant="outline"
                 className="w-full justify-start"
@@ -101,6 +139,21 @@ export default function DashboardPage() {
                 <CreditCard className="h-4 w-4 mr-2" />
                 Manage Billing
               </Button>
+              {user.subscription_status !== 'active' && (
+                <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                  Subscribe to unlock all features
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>Common tasks and shortcuts</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
               <Button variant="outline" className="w-full justify-start" disabled>
                 Add New Client
               </Button>
