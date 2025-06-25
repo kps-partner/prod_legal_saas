@@ -3,11 +3,10 @@
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Building2, User, Mail } from 'lucide-react';
-import SubscriptionManager from '@/components/SubscriptionManager';
+import { LogOut, Building2, User, Mail, CreditCard } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user, logout, token } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -94,6 +93,14 @@ export default function DashboardPage() {
               <CardDescription>Common tasks and shortcuts</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => window.location.href = '/settings/billing'}
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Manage Billing
+              </Button>
               <Button variant="outline" className="w-full justify-start" disabled>
                 Add New Client
               </Button>
@@ -161,13 +168,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Subscription Management Section */}
-        <div className="mt-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Subscription Management</h3>
-          <div className="flex justify-center">
-            {token && <SubscriptionManager token={token} />}
-          </div>
-        </div>
       </main>
     </div>
   );
