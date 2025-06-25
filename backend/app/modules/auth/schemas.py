@@ -4,11 +4,10 @@ from typing import Optional
 
 
 class UserCreate(BaseModel):
+    firm_name: str
+    user_name: str
     email: EmailStr
     password: str
-    name: str
-    role: str
-    firm_id: str
 
 
 class UserResponse(BaseModel):

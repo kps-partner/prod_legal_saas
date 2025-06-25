@@ -27,6 +27,25 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["authentication"])
 
+# Add users router for the /me endpoint
+from fastapi import APIRouter, Depends
+from app.modules.auth.services import get_current_user
+from app.modules.auth.schemas import UserResponse
+
+users_router = APIRouter()
+
+@users_router.get("/me", response_model=UserResponse)
+def read_users_me(current_user = Depends(get_current_user)):
+    """Get current user information."""
+    return UserResponse(
+        email=current_user.email,
+        name=current_user.name,
+        role=current_user.role,
+        firm_id=current_user.firm_id
+    )
+
+app.include_router(users_router, prefix="/api/v1/users", tags=["users"])
+
 
 @app.get("/api/v1/health")
 def health_check():
