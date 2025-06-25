@@ -90,16 +90,6 @@ export default function DashboardPage() {
                 <span className="font-medium w-16">Role:</span>
                 <span className="text-gray-600 capitalize">{user.role}</span>
               </div>
-              <div className="flex items-center text-sm">
-                <span className="font-medium w-16">Status:</span>
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  user.is_active 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {user.is_active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
             </CardContent>
           </Card>
 

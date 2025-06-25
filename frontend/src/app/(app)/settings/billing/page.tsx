@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,7 @@ const STRIPE_PRICE_ID = 'price_1RdwH8Cvk8IU6PphIrsZP9Mo';
 
 export default function BillingPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const handleSubscribeNow = async () => {
@@ -60,6 +62,15 @@ export default function BillingPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-2xl mx-auto">
+        <div className="flex items-center gap-4 mb-8">
+          <Button
+            variant="outline"
+            onClick={() => router.push('/dashboard')}
+            className="flex items-center gap-2"
+          >
+            ← Back to Dashboard
+          </Button>
+        </div>
         <h1 className="text-3xl font-bold mb-8">Billing & Subscription</h1>
         
         <Card>
