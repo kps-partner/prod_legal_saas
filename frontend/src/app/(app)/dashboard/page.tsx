@@ -4,9 +4,10 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogOut, Building2, User, Mail } from 'lucide-react';
+import SubscriptionManager from '@/components/SubscriptionManager';
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -125,7 +126,11 @@ export default function DashboardPage() {
               </div>
               <div className="flex justify-between text-sm">
                 <span>Sprint:</span>
-                <span className="text-blue-600 font-medium">S1 Complete</span>
+                <span className="text-blue-600 font-medium">S2 In Progress</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Billing:</span>
+                <span className="text-green-600 font-medium">✓ Stripe Ready</span>
               </div>
             </CardContent>
           </Card>
@@ -144,17 +149,25 @@ export default function DashboardPage() {
                 Your authentication system is now fully functional with secure user registration, login, and session management.
               </p>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-semibold text-blue-900 mb-2">What's Next?</h4>
+                <h4 className="font-semibold text-blue-900 mb-2">Sprint S2 Progress:</h4>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Sprint S2: Stripe Subscription & Billing Foundation</li>
-                  <li>• Sprint S3: Client Intake & Management System</li>
-                  <li>• Sprint S4: AI-Powered Case Triage & Scheduling</li>
-                  <li>• And much more...</li>
+                  <li>✓ Stripe integration backend setup</li>
+                  <li>✓ Billing endpoints and webhook handling</li>
+                  <li>✓ Subscription management UI component</li>
+                  <li>• Next: Client Intake & Management System</li>
                 </ul>
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Subscription Management Section */}
+        <div className="mt-8">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Subscription Management</h3>
+          <div className="flex justify-center">
+            {token && <SubscriptionManager token={token} />}
+          </div>
+        </div>
       </main>
     </div>
   );

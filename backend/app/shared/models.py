@@ -7,6 +7,7 @@ class Firm(BaseModel):
     id: Optional[str] = Field(default=None, alias="_id")
     name: str
     subscription_status: str = "inactive"
+    stripe_customer_id: Optional[str] = None
     
     model_config = {
         "populate_by_name": True,

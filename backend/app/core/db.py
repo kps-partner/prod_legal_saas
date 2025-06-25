@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGO_URL = os.getenv("DATABASE_URL")
+MONGO_URL = os.getenv("MONGO_DETAILS")
 
 client = MongoClient(MONGO_URL, tlsAllowInvalidCertificates=True)
 db = client.get_database("LawFirmOS")  # Or get_default_database() if you prefer

@@ -24,6 +24,7 @@ export interface User {
   firm_id: string;
   role: string;
   is_active: boolean;
+  subscription_status: string;
 }
 
 export interface ApiError {
@@ -86,6 +87,35 @@ class ApiClient {
     if (!response.ok) {
       const error: ApiError = await response.json();
       throw new Error(error.detail || 'Failed to get user info');
+    }
+
+    return response.json();
+  }
+
+  async createCheckoutSession(priceId: string): Promise<{ url: string }> {
+    const response = await fetch(`${API_BASE_URL}/billing/create-checkout-session`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ price_id: priceId }),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to create checkout session');
+    }
+
+    return response.json();
+  }
+
+  async createCustomerPortalSession(): Promise<{ url: string }> {
+    const response = await fetch(`${API_BASE_URL}/billing/create-customer-portal-session`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to create customer portal session');
     }
 
     return response.json();

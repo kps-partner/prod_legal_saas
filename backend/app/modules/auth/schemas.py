@@ -15,6 +15,7 @@ class UserResponse(BaseModel):
     name: str
     role: str
     firm_id: str
+    subscription_status: str = "inactive"
 
 
 class UserLogin(BaseModel):

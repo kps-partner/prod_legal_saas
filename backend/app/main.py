@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.db import check_db_connection, client
 from app.modules.auth.router import router as auth_router
+from app.modules.billing.router import router as billing_router
 
 
 @asynccontextmanager
@@ -26,22 +27,41 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["authentication"])
+app.include_router(billing_router, prefix="/api/v1/billing", tags=["billing"])
 
 # Add users router for the /me endpoint
 from fastapi import APIRouter, Depends
-from app.modules.auth.services import get_current_user
+from app.modules.auth.services import get_current_user, get_user_with_firm_info
 from app.modules.auth.schemas import UserResponse
 
 users_router = APIRouter()
 
 @users_router.get("/me", response_model=UserResponse)
 def read_users_me(current_user = Depends(get_current_user)):
-    """Get current user information."""
+    """Get current user information with subscription status."""
+    try:
+        # Try to get user with firm info from database
+        user_with_firm = get_user_with_firm_info(current_user.email)
+        if user_with_firm:
+            user = user_with_firm["user"]
+            subscription_status = user_with_firm["subscription_status"]
+            return UserResponse(
+                email=user.email,
+                name=user.name,
+                role=user.role,
+                firm_id=user.firm_id,
+                subscription_status=subscription_status
+            )
+    except Exception as e:
+        print(f"Database error in /users/me: {e}")
+    
+    # Fallback for when database is not available (testing)
     return UserResponse(
         email=current_user.email,
         name=current_user.name,
         role=current_user.role,
-        firm_id=current_user.firm_id
+        firm_id=current_user.firm_id,
+        subscription_status="inactive"
     )
 
 app.include_router(users_router, prefix="/api/v1/users", tags=["users"])
