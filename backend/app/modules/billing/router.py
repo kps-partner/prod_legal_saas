@@ -19,6 +19,12 @@ async def create_customer_portal_session(
 ):
     return await services.create_customer_portal_session(current_user)
 
+@router.post("/cancel-subscription")
+async def cancel_subscription(
+    current_user: User = Depends(get_current_user),
+):
+    return await services.cancel_subscription(current_user)
+
 @router.post("/webhook")
 async def stripe_webhook(request: Request):
     payload = await request.body()

@@ -30,6 +30,16 @@ export default function DashboardPage() {
     window.location.href = '/login';
   };
 
+  const formatSubscriptionEndDate = (timestamp: number | null | undefined) => {
+    if (!timestamp) return null;
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -108,6 +118,8 @@ export default function DashboardPage() {
                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                   user.subscription_status === 'active'
                     ? 'bg-green-100 text-green-800'
+                    : user.subscription_status === 'canceling'
+                    ? 'bg-yellow-100 text-yellow-800'
                     : user.subscription_status === 'past_due'
                     ? 'bg-yellow-100 text-yellow-800'
                     : user.subscription_status === 'incomplete'
@@ -115,6 +127,7 @@ export default function DashboardPage() {
                     : 'bg-gray-100 text-gray-800'
                 }`}>
                   {user.subscription_status === 'active' ? 'Active' :
+                   user.subscription_status === 'canceling' ? 'Canceling' :
                    user.subscription_status === 'past_due' ? 'Past Due' :
                    user.subscription_status === 'incomplete' ? 'Incomplete' :
                    user.subscription_status === 'inactive' ? 'Inactive' :
@@ -129,7 +142,14 @@ export default function DashboardPage() {
                 <CreditCard className="h-4 w-4 mr-2" />
                 Manage Billing
               </Button>
-              {user.subscription_status !== 'active' && (
+              {user.subscription_status === 'canceling' ? (
+                <p className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
+                  {user.subscription_ends_at
+                    ? `Subscription ends on ${formatSubscriptionEndDate(user.subscription_ends_at)}`
+                    : 'Subscription canceling - Access until period end'
+                  }
+                </p>
+              ) : user.subscription_status !== 'active' && (
                 <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
                   Subscribe to unlock all features
                 </p>

@@ -99,6 +99,59 @@ async def create_customer_portal_session(current_user: User):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+async def cancel_subscription(current_user: User):
+    """Cancel the current user's subscription at the end of the billing period."""
+    try:
+        # Retrieve the firm from the database
+        firm = db.firms.find_one({"_id": ObjectId(current_user.firm_id)})
+        if not firm:
+            raise HTTPException(status_code=404, detail="Firm not found")
+        
+        # Check if the firm has a stripe_customer_id
+        stripe_customer_id = firm.get("stripe_customer_id")
+        if not stripe_customer_id:
+            raise HTTPException(
+                status_code=400,
+                detail="No Stripe customer ID found for this firm. No active subscription to cancel."
+            )
+        
+        # Get the customer's active subscriptions
+        subscriptions = stripe.Subscription.list(
+            customer=stripe_customer_id,
+            status="active",
+            limit=1
+        )
+        
+        if not subscriptions.data:
+            raise HTTPException(
+                status_code=400,
+                detail="No active subscription found to cancel."
+            )
+        
+        subscription = subscriptions.data[0]
+        
+        # Cancel the subscription at the end of the billing period
+        updated_subscription = stripe.Subscription.modify(
+            subscription.id,
+            cancel_at_period_end=True
+        )
+        
+        print(f"Subscription {subscription.id} set to cancel at period end for customer: {stripe_customer_id}")
+        
+        return {
+            "message": "Subscription will be canceled at the end of the current billing period",
+            "subscription_id": subscription.id,
+            "current_period_end": getattr(updated_subscription, 'current_period_end', None),
+            "cancel_at_period_end": getattr(updated_subscription, 'cancel_at_period_end', None)
+        }
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        print(f"Error canceling subscription: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 async def handle_stripe_webhook(payload: bytes, sig_header: str):
     print(f"Webhook received - Signature header: {sig_header}")
     print(f"Webhook secret configured: {settings.STRIPE_WEBHOOK_SECRET[:10]}...")
@@ -135,6 +188,8 @@ async def handle_stripe_webhook(payload: bytes, sig_header: str):
         subscription = event["data"]["object"]
         customer_id = subscription.get("customer")
         subscription_status = subscription.get("status")
+        cancel_at_period_end = subscription.get("cancel_at_period_end", False)
+        
         if customer_id and subscription_status:
             # Map Stripe subscription statuses to our internal statuses
             status_mapping = {
@@ -149,11 +204,35 @@ async def handle_stripe_webhook(payload: bytes, sig_header: str):
             }
             internal_status = status_mapping.get(subscription_status, "inactive")
             
+            # If subscription is active but set to cancel at period end, mark as "canceling"
+            if subscription_status == "active" and cancel_at_period_end:
+                internal_status = "canceling"
+            
+            update_data = {"subscription_status": internal_status}
+            
+            # Store the period end date if subscription is set to cancel
+            if cancel_at_period_end:
+                current_period_end = subscription.get("current_period_end")
+                if current_period_end:
+                    update_data["subscription_ends_at"] = current_period_end
+                    print(f"Setting subscription_ends_at to: {current_period_end}")
+            else:
+                # Remove the ends_at field if cancellation was undone
+                update_data["$unset"] = {"subscription_ends_at": ""}
+            
             db.firms.update_one(
                 {"stripe_customer_id": customer_id},
-                {"$set": {"subscription_status": internal_status}},
+                {"$set": update_data} if "$unset" not in update_data else {
+                    "$set": {k: v for k, v in update_data.items() if k != "$unset"},
+                    "$unset": update_data["$unset"]
+                }
             )
-            print(f"Updated firm subscription status to {internal_status} for customer: {customer_id} (Stripe status: {subscription_status})")
+            
+            status_msg = f"{internal_status} for customer: {customer_id} (Stripe status: {subscription_status}"
+            if cancel_at_period_end:
+                status_msg += f", canceling at period end"
+            status_msg += ")"
+            print(f"Updated firm subscription status to {status_msg}")
     elif event["type"] == "customer.subscription.deleted":
         subscription = event["data"]["object"]
         customer_id = subscription.get("customer")

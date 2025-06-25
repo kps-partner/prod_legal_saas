@@ -45,12 +45,14 @@ def read_users_me(current_user = Depends(get_current_user)):
         if user_with_firm:
             user = user_with_firm["user"]
             subscription_status = user_with_firm["subscription_status"]
+            subscription_ends_at = user_with_firm["subscription_ends_at"]
             return UserResponse(
                 email=user.email,
                 name=user.name,
                 role=user.role,
                 firm_id=user.firm_id,
-                subscription_status=subscription_status
+                subscription_status=subscription_status,
+                subscription_ends_at=subscription_ends_at
             )
     except Exception as e:
         print(f"Database error in /users/me: {e}")
@@ -61,7 +63,8 @@ def read_users_me(current_user = Depends(get_current_user)):
         name=current_user.name,
         role=current_user.role,
         firm_id=current_user.firm_id,
-        subscription_status="inactive"
+        subscription_status="inactive",
+        subscription_ends_at=None
     )
 
 app.include_router(users_router, prefix="/api/v1/users", tags=["users"])

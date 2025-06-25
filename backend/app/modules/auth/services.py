@@ -74,12 +74,15 @@ def get_user_with_firm_info(email: str) -> Optional[dict]:
             # Get firm information
             firm_data = db.firms.find_one({"_id": ObjectId(user_data["firm_id"])})
             subscription_status = "inactive"
+            subscription_ends_at = None
             if firm_data:
                 subscription_status = firm_data.get("subscription_status", "inactive")
+                subscription_ends_at = firm_data.get("subscription_ends_at")
             
             return {
                 "user": User(**user_data),
-                "subscription_status": subscription_status
+                "subscription_status": subscription_status,
+                "subscription_ends_at": subscription_ends_at
             }
         return None
     except Exception as db_error:
@@ -96,7 +99,8 @@ def get_user_with_firm_info(email: str) -> Optional[dict]:
         )
         return {
             "user": mock_user,
-            "subscription_status": "inactive"  # Default to inactive for testing
+            "subscription_status": "inactive",  # Default to inactive for testing
+            "subscription_ends_at": None
         }
 
 

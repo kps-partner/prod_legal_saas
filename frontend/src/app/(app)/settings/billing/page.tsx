@@ -14,6 +14,17 @@ export default function BillingPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+
+  const formatSubscriptionEndDate = (timestamp: number | null | undefined) => {
+    if (!timestamp) return null;
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   const handleSubscribeNow = async () => {
     if (!user) return;
@@ -47,6 +58,29 @@ export default function BillingPage() {
     }
   };
 
+  const handleCancelSubscription = async () => {
+    if (!user) return;
+    
+    const confirmed = window.confirm(
+      'Are you sure you want to cancel your subscription? You will retain access until the end of your current billing period.'
+    );
+    
+    if (!confirmed) return;
+    
+    setCancelLoading(true);
+    try {
+      const response = await apiClient.cancelSubscription();
+      alert(`Subscription canceled successfully. You will retain access until ${new Date(response.current_period_end * 1000).toLocaleDateString()}.`);
+      // Refresh the page to show updated status
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to cancel subscription:', error);
+      alert('Failed to cancel subscription. Please try again or contact support.');
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -58,6 +92,7 @@ export default function BillingPage() {
   }
 
   const isSubscriptionActive = user.subscription_status === 'active';
+  const isSubscriptionCanceling = user.subscription_status === 'canceling';
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -87,6 +122,13 @@ export default function BillingPage() {
                 <p className="text-sm text-muted-foreground">
                   {isSubscriptionActive ? (
                     <span className="text-green-600 font-medium">Status: Active</span>
+                  ) : isSubscriptionCanceling ? (
+                    <span className="text-yellow-600 font-medium">
+                      Status: Canceling
+                      {user.subscription_ends_at && (
+                        <span> (Ends {formatSubscriptionEndDate(user.subscription_ends_at)})</span>
+                      )}
+                    </span>
                   ) : (
                     <span className="text-orange-600 font-medium">Status: Inactive</span>
                   )}
@@ -95,7 +137,7 @@ export default function BillingPage() {
             </div>
 
             <div className="pt-4 border-t">
-              {!isSubscriptionActive ? (
+              {!isSubscriptionActive && !isSubscriptionCanceling ? (
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-medium mb-2">Get Started</h4>
@@ -112,7 +154,7 @@ export default function BillingPage() {
                     {loading ? 'Processing...' : 'Subscribe Now'}
                   </Button>
                 </div>
-              ) : (
+              ) : isSubscriptionActive ? (
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-medium mb-2">Manage Your Subscription</h4>
@@ -120,7 +162,39 @@ export default function BillingPage() {
                       Access your billing portal to update payment methods, view invoices, or modify your subscription.
                     </p>
                   </div>
-                  <Button 
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      onClick={handleManageBilling}
+                      disabled={loading}
+                      variant="outline"
+                      size="lg"
+                      className="w-full sm:w-auto"
+                    >
+                      {loading ? 'Processing...' : 'Manage Billing'}
+                    </Button>
+                    <Button
+                      onClick={handleCancelSubscription}
+                      disabled={cancelLoading}
+                      variant="destructive"
+                      size="lg"
+                      className="w-full sm:w-auto"
+                    >
+                      {cancelLoading ? 'Canceling...' : 'Cancel Subscription'}
+                    </Button>
+                  </div>
+                </div>
+              ) : isSubscriptionCanceling ? (
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Subscription Canceling</h4>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Your subscription is set to cancel{user.subscription_ends_at
+                        ? ` on ${formatSubscriptionEndDate(user.subscription_ends_at)}`
+                        : ' at the end of the current billing period'
+                      }. You will retain access until then. You can still manage your billing through the customer portal.
+                    </p>
+                  </div>
+                  <Button
                     onClick={handleManageBilling}
                     disabled={loading}
                     variant="outline"
@@ -130,7 +204,7 @@ export default function BillingPage() {
                     {loading ? 'Processing...' : 'Manage Billing'}
                   </Button>
                 </div>
-              )}
+              ) : null}
             </div>
 
             <div className="pt-4 border-t">

@@ -25,6 +25,7 @@ export interface User {
   role: string;
   is_active: boolean;
   subscription_status: string;
+  subscription_ends_at?: number | null;
 }
 
 export interface ApiError {
@@ -116,6 +117,20 @@ class ApiClient {
     if (!response.ok) {
       const error: ApiError = await response.json();
       throw new Error(error.detail || 'Failed to create customer portal session');
+    }
+
+    return response.json();
+  }
+
+  async cancelSubscription(): Promise<{ message: string; subscription_id: string; current_period_end: number; cancel_at_period_end: boolean }> {
+    const response = await fetch(`${API_BASE_URL}/billing/cancel-subscription`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to cancel subscription');
     }
 
     return response.json();
