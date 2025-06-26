@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, Calendar, AlertCircle, ExternalLink, ArrowLeft, Mail } from 'lucide-react';
+import { CheckCircle, Calendar, AlertCircle, ExternalLink, ArrowLeft } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { GmailPermissionAlert } from '@/components/GmailPermissionAlert';
 
@@ -293,26 +293,6 @@ export default function IntegrationsPage() {
                     </div>
                   )}
 
-                  {/* Gmail Status Section */}
-                  {connectionStatus.connected && (
-                    <div className="border-t pt-4 mt-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <Mail className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-medium">Gmail Integration</span>
-                        </div>
-                        <Badge variant={connectionStatus.has_gmail_permissions ? "default" : "secondary"}>
-                          {connectionStatus.has_gmail_permissions ? "Enabled" : "Not Enabled"}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {connectionStatus.has_gmail_permissions
-                          ? "Email notifications are enabled for intake form submissions"
-                          : "Additional permissions needed to send email notifications"
-                        }
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
             </CardContent>
