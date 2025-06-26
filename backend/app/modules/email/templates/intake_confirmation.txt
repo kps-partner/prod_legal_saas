@@ -1,0 +1,33 @@
+{{ firm_name }}
+Intake Form Confirmation
+
+Dear {{ client_name }},
+
+Thank you for submitting your intake form to {{ firm_name }}. We have successfully received your information and are reviewing your case details.
+
+CASE INFORMATION:
+- Case Reference ID: {{ case_id }}
+- Submission Date: {{ submission_date }}
+- Status: Under Review
+
+WHAT HAPPENS NEXT?
+
+1. Initial Review: Our legal team will review your case details within 1-2 business days
+
+2. Case Assessment: We'll evaluate the merits of your case and determine the best approach
+
+3. Follow-up Contact: A member of our team will contact you to discuss next steps
+
+4. Consultation Scheduling: If appropriate, we'll schedule a consultation to discuss your case in detail
+
+Please keep your case reference ID ({{ case_id }}) for your records. You can reference this ID in any future communications with our office.
+
+If you have any immediate questions or need to provide additional information, please don't hesitate to contact us.
+
+Best regards,
+{{ firm_name }}
+
+Contact us: {{ support_email }}
+
+---
+This is an automated message. Please do not reply directly to this email.

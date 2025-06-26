@@ -11,6 +11,13 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
+    
+    # Gmail API Configuration
+    GMAIL_API_SCOPES: list = [
+        "https://www.googleapis.com/auth/calendar",
+        "https://www.googleapis.com/auth/gmail.send"
+    ]
+    EMAIL_FROM_NAME: str = "Vibecamp Legal"
 
     class Config:
         env_file = ".env"

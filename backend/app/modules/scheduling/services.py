@@ -6,6 +6,7 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from app.core.db import get_database
+from app.core.config import settings
 from app.shared.models import ConnectedCalendar
 from bson import ObjectId
 from datetime import datetime, timedelta
@@ -13,11 +14,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Google OAuth2 configuration
-SCOPES = [
-    'https://www.googleapis.com/auth/calendar.readonly',
-    'https://www.googleapis.com/auth/calendar.events'
-]
+# Google OAuth2 configuration - now includes Gmail API scope
+SCOPES = settings.GMAIL_API_SCOPES
 REDIRECT_URI = 'http://127.0.0.1:8000/api/v1/integrations/google/callback'
 
 
@@ -54,29 +52,56 @@ def generate_auth_url(state: str = None) -> str:
 
 def exchange_code_for_tokens(code: str) -> Dict[str, Any]:
     """Exchange authorization code for access and refresh tokens."""
-    flow = get_google_oauth_flow()
-    flow.fetch_token(code=code)
+    import requests
     
-    credentials = flow.credentials
-    return {
-        'access_token': credentials.token,
-        'refresh_token': credentials.refresh_token,
-        'token_uri': credentials.token_uri,
-        'client_id': credentials.client_id,
-        'client_secret': credentials.client_secret,
-        'scopes': credentials.scopes
+    # Use direct HTTP request to exchange code for tokens to bypass scope validation
+    token_url = "https://oauth2.googleapis.com/token"
+    
+    data = {
+        'code': code,
+        'client_id': os.getenv("GOOGLE_CLIENT_ID"),
+        'client_secret': os.getenv("GOOGLE_CLIENT_SECRET"),
+        'redirect_uri': REDIRECT_URI,
+        'grant_type': 'authorization_code'
     }
+    
+    try:
+        response = requests.post(token_url, data=data)
+        response.raise_for_status()
+        token_data = response.json()
+        
+        # Extract scopes from the response if available
+        scopes = token_data.get('scope', '').split(' ') if token_data.get('scope') else SCOPES
+        
+        return {
+            'access_token': token_data['access_token'],
+            'refresh_token': token_data.get('refresh_token'),
+            'token_uri': token_url,
+            'client_id': os.getenv("GOOGLE_CLIENT_ID"),
+            'client_secret': os.getenv("GOOGLE_CLIENT_SECRET"),
+            'scopes': scopes
+        }
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error exchanging code for tokens: {str(e)}")
+        raise Exception(f"Failed to exchange authorization code: {str(e)}")
 
 
-def get_credentials_from_tokens(access_token: str, refresh_token: str) -> Credentials:
+def get_credentials_from_tokens(access_token: str, refresh_token: str, scopes: List[str] = None) -> Credentials:
     """Create Google credentials object from stored tokens."""
+    # For existing tokens without stored scopes, try to use a minimal calendar scope
+    # that should work with most existing tokens
+    if scopes is None:
+        scopes = ["https://www.googleapis.com/auth/calendar"]
+        logger.info("Using minimal calendar scope for existing token")
+    
+    logger.info(f"Creating credentials with scopes: {scopes}")
     return Credentials(
         token=access_token,
         refresh_token=refresh_token,
         token_uri="https://oauth2.googleapis.com/token",
         client_id=os.getenv("GOOGLE_CLIENT_ID"),
         client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-        scopes=SCOPES
+        scopes=scopes
     )
 
 
@@ -87,12 +112,14 @@ def refresh_access_token(credentials: Credentials) -> Credentials:
     return credentials
 
 
-def get_user_calendars(access_token: str, refresh_token: str) -> List[Dict[str, Any]]:
+def get_user_calendars(access_token: str, refresh_token: str, scopes: List[str] = None) -> List[Dict[str, Any]]:
     """Fetch user's Google calendars."""
     try:
-        credentials = get_credentials_from_tokens(access_token, refresh_token)
+        logger.info(f"Attempting to fetch calendars with scopes: {scopes}")
+        credentials = get_credentials_from_tokens(access_token, refresh_token, scopes)
         credentials = refresh_access_token(credentials)
         
+        logger.info(f"Using credentials with scopes: {credentials.scopes}")
         service = build('calendar', 'v3', credentials=credentials)
         calendar_list = service.calendarList().list().execute()
         
@@ -110,7 +137,7 @@ def get_user_calendars(access_token: str, refresh_token: str) -> List[Dict[str, 
         raise Exception(f"Failed to fetch calendars: {error}")
 
 
-def store_calendar_connection(firm_id: str, access_token: str, refresh_token: str) -> str:
+def store_calendar_connection(firm_id: str, access_token: str, refresh_token: str, scopes: List[str] = None) -> str:
     """Store calendar connection in database."""
     db = get_database()
     
@@ -121,6 +148,7 @@ def store_calendar_connection(firm_id: str, access_token: str, refresh_token: st
         "firm_id": firm_id,
         "access_token": access_token,
         "refresh_token": refresh_token,
+        "scopes": scopes or SCOPES,
         "connected_at": datetime.utcnow()
     }
     
@@ -180,21 +208,53 @@ def get_calendar_connection(firm_id: str) -> Optional[ConnectedCalendar]:
 
 def get_calendar_connection_status(firm_id: str) -> Dict[str, Any]:
     """Get calendar connection status for a firm."""
+    logger.info(f"Getting calendar connection status for firm: {firm_id}")
     connection = get_calendar_connection(firm_id)
     
     if connection:
+        logger.info(f"Found connection for firm {firm_id}")
+        # Check if the connection has Gmail sending permissions
+        has_gmail_scope = False
+        gmail_scope = "https://www.googleapis.com/auth/gmail.send"
+        
+        try:
+            # Get credentials and check scopes
+            stored_scopes = getattr(connection, 'scopes', None)
+            logger.info(f"Stored scopes for firm {firm_id}: {stored_scopes}")
+            
+            credentials = get_credentials_from_tokens(connection.access_token, connection.refresh_token, stored_scopes)
+            credentials = refresh_access_token(credentials)
+            
+            logger.info(f"Credentials scopes for firm {firm_id}: {credentials.scopes}")
+            logger.info(f"Looking for Gmail scope: {gmail_scope}")
+            
+            # Check if Gmail scope is present
+            if credentials.scopes and gmail_scope in credentials.scopes:
+                has_gmail_scope = True
+                logger.info(f"Gmail scope found for firm {firm_id}")
+            else:
+                logger.info(f"Gmail scope NOT found for firm {firm_id}")
+        except Exception as e:
+            logger.warning(f"Failed to check Gmail scope for firm {firm_id}: {str(e)}")
+        
         return {
             "connected": True,
             "calendar_id": connection.calendar_id,
             "calendar_name": connection.calendar_name,
-            "connected_at": connection.connected_at
+            "connected_at": connection.connected_at,
+            "has_gmail_permissions": has_gmail_scope,
+            "required_scopes": SCOPES,
+            "needs_reauth": not has_gmail_scope
         }
     else:
         return {
             "connected": False,
             "calendar_id": None,
             "calendar_name": None,
-            "connected_at": None
+            "connected_at": None,
+            "has_gmail_permissions": False,
+            "required_scopes": SCOPES,
+            "needs_reauth": False
         }
 
 

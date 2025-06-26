@@ -1,6 +1,7 @@
 """Services for public intake form functionality."""
 
 import logging
+import asyncio
 from typing import Dict, List
 from bson import ObjectId
 from fastapi import HTTPException, status
@@ -9,6 +10,7 @@ from datetime import datetime
 from app.core.db import get_database
 from app.shared.models import Case, CaseStatus
 from app.modules.public.schemas import IntakeFormSubmission, PublicIntakePageData, CaseTypeOption
+from app.modules.email.services import send_intake_confirmation_email
 
 logger = logging.getLogger(__name__)
 db = get_database()
@@ -83,7 +85,7 @@ def get_public_intake_page_data(firm_id: str) -> PublicIntakePageData:
         )
 
 
-def submit_intake_form(firm_id: str, submission: IntakeFormSubmission) -> str:
+async def submit_intake_form(firm_id: str, submission: IntakeFormSubmission) -> str:
     """Submit an intake form and create a new case."""
     try:
         # Validate ObjectId format first
@@ -132,6 +134,30 @@ def submit_intake_form(firm_id: str, submission: IntakeFormSubmission) -> str:
         case_id = str(result.inserted_id)
         
         logger.info(f"New case created from intake form: {case_id} for firm {firm_id}")
+        
+        # Send confirmation email to client (async, non-blocking)
+        try:
+            firm_name = firm.get("name", "Law Firm")
+            submission_date = datetime.utcnow().strftime("%B %d, %Y")
+            
+            email_sent = await send_intake_confirmation_email(
+                firm_id=firm_id,
+                to_email=submission.client_email,
+                client_name=submission.client_name,
+                firm_name=firm_name,
+                case_id=case_id,
+                submission_date=submission_date
+            )
+            
+            if email_sent:
+                logger.info(f"Confirmation email sent successfully to {submission.client_email} for case {case_id}")
+            else:
+                logger.warning(f"Failed to send confirmation email to {submission.client_email} for case {case_id}")
+                
+        except Exception as email_error:
+            # Log email error but don't fail the entire submission
+            logger.error(f"Email sending error for case {case_id}: {str(email_error)}")
+        
         return case_id
         
     except HTTPException:

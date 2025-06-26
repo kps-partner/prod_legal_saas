@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intake Form Confirmation - {{ firm_name }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 16px;
+            color: #6b7280;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+        .info-box {
+            background-color: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .info-item {
+            margin-bottom: 10px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #374151;
+        }
+        .info-value {
+            color: #1f2937;
+        }
+        .next-steps {
+            background-color: #f9fafb;
+            border-left: 4px solid #10b981;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .next-steps h3 {
+            color: #065f46;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .next-steps ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .next-steps li {
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        .footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .contact-info {
+            margin-top: 15px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+        .button:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">{{ firm_name }}</div>
+            <div class="title">Intake Form Received</div>
+            <div class="subtitle">We've successfully received your information</div>
+        </div>
+
+        <div class="content">
+            <div class="greeting">
+                Dear {{ client_name }},
+            </div>
+
+            <p>Thank you for submitting your intake form to {{ firm_name }}. We have successfully received your information and are reviewing your case details.</p>
+
+            <div class="info-box">
+                <div class="info-item">
+                    <span class="info-label">Case Reference ID:</span>
+                    <span class="info-value">{{ case_id }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Submission Date:</span>
+                    <span class="info-value">{{ submission_date }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Status:</span>
+                    <span class="info-value">Under Review</span>
+                </div>
+            </div>
+
+            <div class="next-steps">
+                <h3>What Happens Next?</h3>
+                <ul>
+                    <li><strong>Initial Review:</strong> Our legal team will review your case details within 1-2 business days</li>
+                    <li><strong>Case Assessment:</strong> We'll evaluate the merits of your case and determine the best approach</li>
+                    <li><strong>Follow-up Contact:</strong> A member of our team will contact you to discuss next steps</li>
+                    <li><strong>Consultation Scheduling:</strong> If appropriate, we'll schedule a consultation to discuss your case in detail</li>
+                </ul>
+            </div>
+
+            <p>Please keep your case reference ID (<strong>{{ case_id }}</strong>) for your records. You can reference this ID in any future communications with our office.</p>
+
+            <p>If you have any immediate questions or need to provide additional information, please don't hesitate to contact us.</p>
+        </div>
+
+        <div class="footer">
+            <p><strong>{{ firm_name }}</strong></p>
+            <div class="contact-info">
+                <p>If you have questions about your submission, please contact us at:</p>
+                <p><a href="mailto:{{ support_email }}">{{ support_email }}</a></p>
+            </div>
+            <p style="margin-top: 20px; font-size: 12px; color: #9ca3af;">
+                This is an automated message. Please do not reply directly to this email.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

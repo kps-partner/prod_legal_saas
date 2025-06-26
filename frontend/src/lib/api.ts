@@ -188,6 +188,9 @@ class ApiClient {
     calendar_id?: string;
     calendar_name?: string;
     connected_at?: string;
+    has_gmail_permissions?: boolean;
+    required_scopes?: string[];
+    needs_reauth?: boolean;
   }> {
     const response = await fetch(`${API_BASE_URL}/integrations/google/status`, {
       method: 'GET',

@@ -7,6 +7,7 @@ import { LogOut, Building2, User, Mail, CreditCard, Settings, Calendar, FileText
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api';
+import { GmailPermissionAlert } from '@/components/GmailPermissionAlert';
 
 export default function DashboardPage() {
   const { user, logout, refreshUser } = useAuth();
@@ -15,6 +16,8 @@ export default function DashboardPage() {
     connected: boolean;
     calendar_name?: string;
     loading: boolean;
+    has_gmail_permissions?: boolean;
+    needs_reauth?: boolean;
   }>({ connected: false, loading: true });
   const [copySuccess, setCopySuccess] = useState(false);
 
@@ -40,6 +43,8 @@ export default function DashboardPage() {
         setCalendarStatus({
           connected: status.connected,
           calendar_name: status.calendar_name,
+          has_gmail_permissions: status.has_gmail_permissions,
+          needs_reauth: status.needs_reauth,
           loading: false
         });
       } catch (error) {
@@ -52,6 +57,26 @@ export default function DashboardPage() {
       fetchCalendarStatus();
     }
   }, [user]);
+
+  // Handle successful reauthorization
+  const handleReauthSuccess = () => {
+    // Refresh calendar status after successful reauth
+    const fetchCalendarStatus = async () => {
+      try {
+        const status = await apiClient.getGoogleCalendarStatus();
+        setCalendarStatus({
+          connected: status.connected,
+          calendar_name: status.calendar_name,
+          has_gmail_permissions: status.has_gmail_permissions,
+          needs_reauth: status.needs_reauth,
+          loading: false
+        });
+      } catch (error) {
+        console.error('Failed to fetch calendar status:', error);
+      }
+    };
+    fetchCalendarStatus();
+  };
 
   const handleLogout = () => {
     logout();
@@ -127,6 +152,13 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Dashboard</h2>
           <p className="text-gray-600">Welcome to your law firm management system</p>
         </div>
+
+        {/* Gmail Permission Alert - Show when connected but missing Gmail permissions */}
+        {calendarStatus.connected && calendarStatus.needs_reauth && (
+          <div className="mb-6">
+            <GmailPermissionAlert onReauthSuccess={handleReauthSuccess} />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {/* User Info Card */}

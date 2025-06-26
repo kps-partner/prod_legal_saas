@@ -6,14 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, Calendar, AlertCircle, ExternalLink, ArrowLeft } from 'lucide-react';
+import { CheckCircle, Calendar, AlertCircle, ExternalLink, ArrowLeft, Mail } from 'lucide-react';
 import { apiClient } from '@/lib/api';
+import { GmailPermissionAlert } from '@/components/GmailPermissionAlert';
 
 interface CalendarConnectionStatus {
   connected: boolean;
   calendar_id?: string;
   calendar_name?: string;
   connected_at?: string;
+  has_gmail_permissions?: boolean;
+  needs_reauth?: boolean;
 }
 
 interface GoogleCalendar {
@@ -60,7 +63,14 @@ export default function IntegrationsPage() {
   const fetchConnectionStatus = async () => {
     try {
       const status = await apiClient.getGoogleCalendarStatus();
-      setConnectionStatus(status);
+      setConnectionStatus({
+        connected: status.connected,
+        calendar_id: status.calendar_id,
+        calendar_name: status.calendar_name,
+        connected_at: status.connected_at,
+        has_gmail_permissions: status.has_gmail_permissions,
+        needs_reauth: status.needs_reauth
+      });
       if (status.calendar_id) {
         setSelectedCalendar(status.calendar_id);
       }
@@ -164,6 +174,13 @@ export default function IntegrationsPage() {
           </Alert>
         )}
 
+        {/* Gmail Permission Alert - Show when connected but missing Gmail permissions */}
+        {connectionStatus.connected && connectionStatus.needs_reauth && (
+          <div className="mb-6">
+            <GmailPermissionAlert onReauthSuccess={fetchConnectionStatus} />
+          </div>
+        )}
+
         <div className="grid gap-6">
           {/* Google Calendar Integration */}
           <Card>
@@ -200,9 +217,21 @@ export default function IntegrationsPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-2 text-sm text-green-600">
-                    <CheckCircle className="h-4 w-4" />
-                    <span>Google Calendar connected successfully</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2 text-sm text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Google Calendar connected successfully</span>
+                    </div>
+                    <Button
+                      onClick={handleConnect}
+                      disabled={connecting}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center space-x-2"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      <span>{connecting ? 'Reconnecting...' : 'Reconnect'}</span>
+                    </Button>
                   </div>
                   
                   {connectionStatus.connected_at && (
@@ -210,6 +239,12 @@ export default function IntegrationsPage() {
                       Connected on {new Date(connectionStatus.connected_at).toLocaleDateString()}
                     </p>
                   )}
+                  
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Need Gmail permissions?</strong> Click "Reconnect" to grant additional permissions for email notifications.
+                    </p>
+                  </div>
 
                   {calendars.length > 0 && (
                     <div className="space-y-3">
@@ -255,6 +290,27 @@ export default function IntegrationsPage() {
                           </p>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Gmail Status Section */}
+                  {connectionStatus.connected && (
+                    <div className="border-t pt-4 mt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Mail className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium">Gmail Integration</span>
+                        </div>
+                        <Badge variant={connectionStatus.has_gmail_permissions ? "default" : "secondary"}>
+                          {connectionStatus.has_gmail_permissions ? "Enabled" : "Not Enabled"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {connectionStatus.has_gmail_permissions
+                          ? "Email notifications are enabled for intake form submissions"
+                          : "Additional permissions needed to send email notifications"
+                        }
+                      </p>
                     </div>
                   )}
                 </div>

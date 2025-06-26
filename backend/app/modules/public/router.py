@@ -26,9 +26,9 @@ def get_intake_page_data(firm_id: str):
 
 
 @router.post("/intake/{firm_id}/submit", response_model=IntakeFormSubmissionResponse)
-def submit_intake_form_endpoint(firm_id: str, submission: IntakeFormSubmission):
+async def submit_intake_form_endpoint(firm_id: str, submission: IntakeFormSubmission):
     """Submit an intake form for a specific firm."""
-    case_id = submit_intake_form(firm_id, submission)
+    case_id = await submit_intake_form(firm_id, submission)
     return IntakeFormSubmissionResponse(
         success=True,
         message="Thank you for your submission. We will contact you soon.",

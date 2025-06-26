@@ -127,6 +127,7 @@ class ConnectedCalendar(BaseModel):
     firm_id: str
     access_token: str
     refresh_token: Optional[str] = None  # Allow None for refresh_token
+    scopes: Optional[list] = None  # Store the granted OAuth scopes
     calendar_id: Optional[str] = None
     calendar_name: Optional[str] = None
     connected_at: datetime = Field(default_factory=datetime.utcnow)

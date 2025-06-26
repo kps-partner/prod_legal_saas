@@ -50,7 +50,8 @@ def google_oauth_callback(
         connection_id = store_calendar_connection(
             firm_id=state,
             access_token=token_data['access_token'],
-            refresh_token=token_data['refresh_token']
+            refresh_token=token_data['refresh_token'],
+            scopes=token_data['scopes']
         )
         
         logger.info(f"Successfully stored calendar connection {connection_id} for firm {state}")
@@ -81,7 +82,8 @@ def get_google_calendars(current_user: User = Depends(get_current_user)):
             raise HTTPException(status_code=404, detail="Google Calendar not connected")
         
         # Fetch calendars from Google API
-        calendar_data = get_user_calendars(connection.access_token, connection.refresh_token)
+        stored_scopes = getattr(connection, 'scopes', None)
+        calendar_data = get_user_calendars(connection.access_token, connection.refresh_token, stored_scopes)
         
         calendars = [
             GoogleCalendar(
