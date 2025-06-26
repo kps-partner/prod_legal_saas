@@ -135,6 +135,72 @@ class ApiClient {
 
     return response.json();
   }
+
+  // Google Calendar Integration endpoints
+  async getGoogleAuthUrl(): Promise<{ auth_url: string }> {
+    const response = await fetch(`${API_BASE_URL}/integrations/google/authorize`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get Google auth URL');
+    }
+
+    return response.json();
+  }
+
+  async getGoogleCalendars(): Promise<{ calendars: Array<{ id: string; summary: string; primary?: boolean }> }> {
+    const response = await fetch(`${API_BASE_URL}/integrations/google/calendars`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get Google calendars');
+    }
+
+    return response.json();
+  }
+
+  async selectGoogleCalendar(calendarId: string, calendarName: string): Promise<{ status: string; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/integrations/google/calendars/select`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({
+        calendar_id: calendarId,
+        calendar_name: calendarName,
+      }),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to select calendar');
+    }
+
+    return response.json();
+  }
+
+  async getGoogleCalendarStatus(): Promise<{
+    connected: boolean;
+    calendar_id?: string;
+    calendar_name?: string;
+    connected_at?: string;
+  }> {
+    const response = await fetch(`${API_BASE_URL}/integrations/google/status`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get calendar status');
+    }
+
+    return response.json();
+  }
 }
 
 export const apiClient = new ApiClient();

@@ -3,7 +3,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Building2, User, Mail, CreditCard } from 'lucide-react';
+import { LogOut, Building2, User, Mail, CreditCard, Settings, Calendar } from 'lucide-react';
 import { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
@@ -61,11 +61,34 @@ export default function DashboardPage() {
               <h1 className="text-xl font-semibold text-gray-900">LawFirm OS</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">Welcome, {user.name}</span>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
+              {/* Navigation Links - Always visible */}
+              <nav className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.location.href = '/settings/billing'}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  <Settings className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Settings</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.location.href = '/settings/integrations'}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  <Calendar className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Integrations</span>
+                </Button>
+              </nav>
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-700 hidden sm:inline">Welcome, {user.name}</span>
+                <Button variant="outline" size="sm" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Logout</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -157,6 +180,36 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
+          {/* Google Calendar Integration Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Calendar className="h-5 w-5 mr-2" />
+                Google Calendar
+              </CardTitle>
+              <CardDescription>Connect your Google Calendar for scheduling</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Status:</span>
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  Not Connected
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => window.location.href = '/settings/integrations'}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Connect Google Calendar
+              </Button>
+              <p className="text-xs text-gray-500">
+                Connect your calendar to enable appointment scheduling
+              </p>
+            </CardContent>
+          </Card>
+
           {/* Quick Actions Card */}
           <Card>
             <CardHeader>
@@ -196,11 +249,15 @@ export default function DashboardPage() {
               </div>
               <div className="flex justify-between text-sm">
                 <span>Sprint:</span>
-                <span className="text-blue-600 font-medium">S2 In Progress</span>
+                <span className="text-blue-600 font-medium">S3 In Progress</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Billing:</span>
                 <span className="text-green-600 font-medium">✓ Stripe Ready</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Calendar:</span>
+                <span className="text-yellow-600 font-medium">⚡ Google Ready</span>
               </div>
             </CardContent>
           </Card>
@@ -215,16 +272,17 @@ export default function DashboardPage() {
           <CardContent>
             <div className="prose max-w-none">
               <p className="text-gray-600 mb-4">
-                Congratulations! You have successfully completed Sprint S1 - Core User & Firm Onboarding. 
-                Your authentication system is now fully functional with secure user registration, login, and session management.
+                Congratulations! You have successfully completed Sprint S2 - Billing & Subscription Management.
+                Your Stripe integration is fully functional with secure payment processing, subscription management, and customer portal access.
               </p>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-semibold text-blue-900 mb-2">Sprint S2 Progress:</h4>
+                <h4 className="font-semibold text-blue-900 mb-2">Sprint S3 Progress - Google Calendar Integration:</h4>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>✓ Stripe integration backend setup</li>
-                  <li>✓ Billing endpoints and webhook handling</li>
-                  <li>✓ Subscription management UI component</li>
-                  <li>• Next: Client Intake & Management System</li>
+                  <li>✓ Google OAuth2 authentication flow</li>
+                  <li>✓ Calendar API integration backend</li>
+                  <li>✓ Integrations management UI</li>
+                  <li>✓ Calendar connection and selection</li>
+                  <li>• Next: Appointment scheduling system</li>
                 </ul>
               </div>
             </div>

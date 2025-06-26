@@ -17,3 +17,8 @@ def check_db_connection():
         print("MongoDB connection successful.")
     except Exception as e:
         print(f"MongoDB connection failed: {e}")
+
+
+def get_database():
+    """Get the database instance."""
+    return db
