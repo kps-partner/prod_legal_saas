@@ -39,37 +39,74 @@ class GmailEmailService:
     async def get_firm_gmail_credentials(self, firm_id: str) -> Optional[Credentials]:
         """Get Gmail credentials for a firm from the connected calendar."""
         try:
+            logger.info(f"EMAIL SERVICE DEBUG: Getting Gmail credentials for firm {firm_id}")
             db = get_database()
             connection = db.connected_calendars.find_one({"firm_id": firm_id})
             
             if not connection:
-                logger.error(f"No Google connection found for firm {firm_id}")
+                logger.error(f"EMAIL SERVICE DEBUG: No Google connection found for firm {firm_id}")
                 return None
             
-            if not connection.get('access_token') or not connection.get('refresh_token'):
-                logger.error(f"Missing tokens for firm {firm_id}")
+            if not connection.get('access_token'):
+                logger.error(f"EMAIL SERVICE DEBUG: Missing access token for firm {firm_id}")
                 return None
             
-            # Create credentials with Gmail scope
+            # Check if refresh token is missing
+            refresh_token = connection.get('refresh_token')
+            if not refresh_token:
+                logger.warning(f"EMAIL SERVICE DEBUG: Missing refresh token for firm {firm_id} - connection may expire soon")
+                logger.warning(f"EMAIL SERVICE DEBUG: Will attempt to use current access token, but user should re-authenticate")
+            
+            # Get stored scopes from the connection
+            stored_scopes = connection.get('scopes', None)
+            logger.info(f"EMAIL SERVICE DEBUG: stored scopes for firm {firm_id}: {stored_scopes}")
+            
+            # Create credentials with stored scopes (refresh_token can be None)
             credentials = get_credentials_from_tokens(
-                connection['access_token'], 
-                connection['refresh_token']
+                connection['access_token'],
+                refresh_token,  # This can be None
+                stored_scopes
             )
             
-            # Refresh if needed
-            credentials = refresh_access_token(credentials)
+            logger.info(f"EMAIL SERVICE DEBUG: Created credentials with scopes: {credentials.scopes}")
             
-            # Update tokens in database if they were refreshed
-            if credentials.token != connection['access_token']:
-                db.connected_calendars.update_one(
-                    {"firm_id": firm_id},
-                    {"$set": {"access_token": credentials.token}}
-                )
+            # Check if Gmail scope is available
+            gmail_scope = "https://www.googleapis.com/auth/gmail.send"
+            if not credentials.scopes or gmail_scope not in credentials.scopes:
+                logger.error(f"EMAIL SERVICE DEBUG: Gmail scope not available for firm {firm_id}. Available scopes: {credentials.scopes}")
+                logger.error(f"EMAIL SERVICE DEBUG: Looking for scope: {gmail_scope}")
+                return None
             
+            # Only try to refresh if we have a refresh token and the token is expired
+            if refresh_token and credentials.expired:
+                logger.info(f"EMAIL SERVICE DEBUG: Token expired, attempting refresh")
+                try:
+                    credentials = refresh_access_token(credentials)
+                    logger.info(f"EMAIL SERVICE DEBUG: After refresh, credentials valid: {not credentials.expired}")
+                    
+                    # Update tokens in database if they were refreshed
+                    if credentials.token != connection['access_token']:
+                        logger.info(f"EMAIL SERVICE DEBUG: Updating refreshed token in database")
+                        db.connected_calendars.update_one(
+                            {"firm_id": firm_id},
+                            {"$set": {"access_token": credentials.token}}
+                        )
+                except Exception as refresh_error:
+                    logger.error(f"EMAIL SERVICE DEBUG: Failed to refresh token: {refresh_error}")
+                    return None
+            elif not refresh_token and credentials.expired:
+                logger.error(f"EMAIL SERVICE DEBUG: Token expired and no refresh token available for firm {firm_id}")
+                return None
+            else:
+                logger.info(f"EMAIL SERVICE DEBUG: Using existing token (expired: {credentials.expired})")
+            
+            logger.info(f"EMAIL SERVICE DEBUG: Gmail credentials successfully obtained for firm {firm_id}")
             return credentials
             
         except Exception as e:
-            logger.error(f"Failed to get Gmail credentials for firm {firm_id}: {str(e)}")
+            logger.error(f"EMAIL SERVICE DEBUG: Failed to get Gmail credentials for firm {firm_id}: {str(e)}")
+            import traceback
+            logger.error(f"EMAIL SERVICE DEBUG: Traceback: {traceback.format_exc()}")
             return None
     
     def create_gmail_message(
@@ -136,19 +173,26 @@ class GmailEmailService:
             bool: True if email was sent successfully, False otherwise
         """
         try:
+            logger.info(f"EMAIL SERVICE DEBUG: Attempting to send email to {to_email} for firm {firm_id}")
+            logger.info(f"EMAIL SERVICE DEBUG: Subject: {subject}")
+            
             # Get Gmail credentials for the firm
             credentials = await self.get_firm_gmail_credentials(firm_id)
             if not credentials:
-                logger.error(f"No Gmail credentials available for firm {firm_id}")
+                logger.error(f"EMAIL SERVICE DEBUG: No Gmail credentials available for firm {firm_id}")
                 return False
+            
+            logger.info(f"EMAIL SERVICE DEBUG: Got credentials, building Gmail service")
             
             # Build Gmail service
             service = build('gmail', 'v1', credentials=credentials)
             
             # Use default sender name if not provided
             sender_name = from_name or settings.EMAIL_FROM_NAME
+            logger.info(f"EMAIL SERVICE DEBUG: Using sender name: {sender_name}")
             
             # Create the message
+            logger.info(f"EMAIL SERVICE DEBUG: Creating Gmail message")
             message = self.create_gmail_message(
                 to_email=to_email,
                 subject=subject,
@@ -157,20 +201,24 @@ class GmailEmailService:
                 from_name=sender_name
             )
             
+            logger.info(f"EMAIL SERVICE DEBUG: Sending message via Gmail API")
             # Send the message
             result = service.users().messages().send(
                 userId='me',
                 body=message
             ).execute()
             
-            logger.info(f"Email sent successfully to {to_email} via Gmail API. Message ID: {result.get('id')}")
+            logger.info(f"EMAIL SERVICE DEBUG: Email sent successfully to {to_email} via Gmail API. Message ID: {result.get('id')}")
             return True
             
         except HttpError as error:
-            logger.error(f"Gmail API error sending email to {to_email}: {error}")
+            logger.error(f"EMAIL SERVICE DEBUG: Gmail API error sending email to {to_email}: {error}")
+            logger.error(f"EMAIL SERVICE DEBUG: Error details: {error.content if hasattr(error, 'content') else 'No details'}")
             return False
         except Exception as e:
-            logger.error(f"Failed to send email to {to_email} via Gmail API: {str(e)}")
+            logger.error(f"EMAIL SERVICE DEBUG: Failed to send email to {to_email} via Gmail API: {str(e)}")
+            import traceback
+            logger.error(f"EMAIL SERVICE DEBUG: Traceback: {traceback.format_exc()}")
             return False
     
     def render_template(self, template_name: str, context: Dict[str, Any]) -> str:

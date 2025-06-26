@@ -45,8 +45,10 @@ def generate_auth_url(state: str = None) -> str:
     auth_url, _ = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true',
+        prompt='consent',  # Force consent screen to ensure refresh token
         state=state
     )
+    logger.info(f"OAUTH DEBUG: Generated auth URL with prompt=consent to force refresh token")
     return auth_url
 
 
@@ -66,14 +68,20 @@ def exchange_code_for_tokens(code: str) -> Dict[str, Any]:
     }
     
     try:
+        logger.info(f"OAUTH DEBUG: Exchanging code for tokens")
         response = requests.post(token_url, data=data)
         response.raise_for_status()
         token_data = response.json()
         
+        logger.info(f"OAUTH DEBUG: Token response keys: {list(token_data.keys())}")
+        logger.info(f"OAUTH DEBUG: Has refresh_token: {'refresh_token' in token_data}")
+        logger.info(f"OAUTH DEBUG: Refresh token value: {token_data.get('refresh_token', 'None')}")
+        
         # Extract scopes from the response if available
         scopes = token_data.get('scope', '').split(' ') if token_data.get('scope') else SCOPES
+        logger.info(f"OAUTH DEBUG: Extracted scopes: {scopes}")
         
-        return {
+        result = {
             'access_token': token_data['access_token'],
             'refresh_token': token_data.get('refresh_token'),
             'token_uri': token_url,
@@ -81,12 +89,16 @@ def exchange_code_for_tokens(code: str) -> Dict[str, Any]:
             'client_secret': os.getenv("GOOGLE_CLIENT_SECRET"),
             'scopes': scopes
         }
+        
+        logger.info(f"OAUTH DEBUG: Returning token data with refresh_token: {result['refresh_token'] is not None}")
+        return result
+        
     except requests.exceptions.RequestException as e:
         logger.error(f"Error exchanging code for tokens: {str(e)}")
         raise Exception(f"Failed to exchange authorization code: {str(e)}")
 
 
-def get_credentials_from_tokens(access_token: str, refresh_token: str, scopes: List[str] = None) -> Credentials:
+def get_credentials_from_tokens(access_token: str, refresh_token: str = None, scopes: List[str] = None) -> Credentials:
     """Create Google credentials object from stored tokens."""
     # For existing tokens without stored scopes, try to use a minimal calendar scope
     # that should work with most existing tokens
@@ -95,9 +107,11 @@ def get_credentials_from_tokens(access_token: str, refresh_token: str, scopes: L
         logger.info("Using minimal calendar scope for existing token")
     
     logger.info(f"Creating credentials with scopes: {scopes}")
+    logger.info(f"Refresh token available: {'Yes' if refresh_token else 'No'}")
+    
     return Credentials(
         token=access_token,
-        refresh_token=refresh_token,
+        refresh_token=refresh_token,  # Can be None
         token_uri="https://oauth2.googleapis.com/token",
         client_id=os.getenv("GOOGLE_CLIENT_ID"),
         client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
@@ -139,6 +153,11 @@ def get_user_calendars(access_token: str, refresh_token: str, scopes: List[str] 
 
 def store_calendar_connection(firm_id: str, access_token: str, refresh_token: str, scopes: List[str] = None) -> str:
     """Store calendar connection in database."""
+    logger.info(f"STORE DEBUG: Storing connection for firm {firm_id}")
+    logger.info(f"STORE DEBUG: Access token provided: {'Yes' if access_token else 'No'}")
+    logger.info(f"STORE DEBUG: Refresh token provided: {'Yes' if refresh_token else 'No'}")
+    logger.info(f"STORE DEBUG: Scopes provided: {scopes}")
+    
     db = get_database()
     
     # Check if connection already exists for this firm
@@ -152,8 +171,11 @@ def store_calendar_connection(firm_id: str, access_token: str, refresh_token: st
         "connected_at": datetime.utcnow()
     }
     
+    logger.info(f"STORE DEBUG: Calendar data to store: {dict(calendar_data, access_token='[REDACTED]')}")
+    
     if existing:
         # Update existing connection
+        logger.info(f"STORE DEBUG: Updating existing connection for firm {firm_id}")
         db.connected_calendars.update_one(
             {"firm_id": firm_id},
             {"$set": calendar_data}
@@ -161,6 +183,7 @@ def store_calendar_connection(firm_id: str, access_token: str, refresh_token: st
         return str(existing["_id"])
     else:
         # Create new connection
+        logger.info(f"STORE DEBUG: Creating new connection for firm {firm_id}")
         result = db.connected_calendars.insert_one(calendar_data)
         return str(result.inserted_id)
 
@@ -333,17 +356,35 @@ def get_calendar_availability(firm_id: str, days: int = 14) -> List[Dict[str, An
 def create_calendar_appointment(firm_id: str, case_id: str, start_time: datetime, client_name: str, client_email: str) -> Dict[str, Any]:
     """Create a calendar appointment and return appointment details."""
     try:
+        logger.info(f"CALENDAR DEBUG: Creating appointment for firm {firm_id}, case {case_id}")
+        logger.info(f"CALENDAR DEBUG: Client: {client_name} ({client_email})")
+        logger.info(f"CALENDAR DEBUG: Start time: {start_time}")
+        
         connection = get_calendar_connection(firm_id)
         if not connection or not connection.calendar_id:
+            logger.error(f"CALENDAR DEBUG: No calendar connection found for firm {firm_id}")
             raise Exception("No calendar connection found for this firm")
         
-        credentials = get_credentials_from_tokens(connection.access_token, connection.refresh_token)
-        credentials = refresh_access_token(credentials)
+        logger.info(f"CALENDAR DEBUG: Found connection, calendar_id: {connection.calendar_id}")
+        logger.info(f"CALENDAR DEBUG: Has access_token: {'Yes' if connection.access_token else 'No'}")
+        logger.info(f"CALENDAR DEBUG: Has refresh_token: {'Yes' if connection.refresh_token else 'No'}")
         
+        # Get stored scopes from the connection
+        stored_scopes = getattr(connection, 'scopes', None)
+        logger.info(f"CALENDAR DEBUG: Stored scopes: {stored_scopes}")
+        
+        credentials = get_credentials_from_tokens(connection.access_token, connection.refresh_token, stored_scopes)
+        logger.info(f"CALENDAR DEBUG: Created credentials with scopes: {credentials.scopes}")
+        
+        credentials = refresh_access_token(credentials)
+        logger.info(f"CALENDAR DEBUG: After refresh, credentials expired: {credentials.expired}")
+        
+        logger.info(f"CALENDAR DEBUG: Building Calendar service")
         service = build('calendar', 'v3', credentials=credentials)
         
         # Calculate end time (1 hour appointment)
         end_time = start_time + timedelta(hours=1)
+        logger.info(f"CALENDAR DEBUG: End time calculated: {end_time}")
         
         # Create the event
         event = {
@@ -375,25 +416,40 @@ def create_calendar_appointment(firm_id: str, case_id: str, start_time: datetime
             },
         }
         
+        logger.info(f"CALENDAR DEBUG: Event data prepared, inserting into calendar {connection.calendar_id}")
+        
         # Create the event with conference data
-        created_event = service.events().insert(
-            calendarId=connection.calendar_id,
-            body=event,
-            conferenceDataVersion=1
-        ).execute()
+        try:
+            created_event = service.events().insert(
+                calendarId=connection.calendar_id,
+                body=event,
+                conferenceDataVersion=1,
+                sendUpdates='all'  # This ensures email invitations are sent to attendees
+            ).execute()
+            logger.info(f"CALENDAR DEBUG: Event created successfully with email notifications, ID: {created_event.get('id')}")
+        except Exception as calendar_error:
+            logger.error(f"CALENDAR DEBUG: Failed to create calendar event: {str(calendar_error)}")
+            import traceback
+            logger.error(f"CALENDAR DEBUG: Calendar error traceback: {traceback.format_exc()}")
+            raise
         
         # Extract Google Meet link
         meet_link = None
         if 'conferenceData' in created_event and 'entryPoints' in created_event['conferenceData']:
+            logger.info(f"CALENDAR DEBUG: Conference data found, extracting meet link")
             for entry_point in created_event['conferenceData']['entryPoints']:
                 if entry_point['entryPointType'] == 'video':
                     meet_link = entry_point['uri']
+                    logger.info(f"CALENDAR DEBUG: Meet link extracted: {meet_link}")
                     break
+        else:
+            logger.warning(f"CALENDAR DEBUG: No conference data found in created event")
         
         # Create appointment record in database
         from app.core.db import get_database
         from app.shared.models import Appointment
         
+        logger.info(f"CALENDAR DEBUG: Creating appointment record in database")
         db = get_database()
         appointment_data = {
             "case_id": case_id,
@@ -408,9 +464,11 @@ def create_calendar_appointment(firm_id: str, case_id: str, start_time: datetime
         
         result = db.appointments.insert_one(appointment_data)
         appointment_id = str(result.inserted_id)
+        logger.info(f"CALENDAR DEBUG: Appointment record created with ID: {appointment_id}")
         
         # Update case status to 'Meeting Scheduled'
         from app.shared.models import CaseStatus
+        logger.info(f"CALENDAR DEBUG: Updating case {case_id} status to IN_PROGRESS")
         db.cases.update_one(
             {"_id": ObjectId(case_id)},
             {"$set": {
@@ -419,7 +477,7 @@ def create_calendar_appointment(firm_id: str, case_id: str, start_time: datetime
             }}
         )
         
-        logger.info(f"Created appointment {appointment_id} for case {case_id}")
+        logger.info(f"CALENDAR DEBUG: Successfully created appointment {appointment_id} for case {case_id}")
         
         return {
             'appointment_id': appointment_id,
