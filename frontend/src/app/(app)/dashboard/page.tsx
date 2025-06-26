@@ -3,7 +3,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Building2, User, Mail, CreditCard, Settings, Calendar, FileText, Layout, ExternalLink, Copy } from 'lucide-react';
+import { LogOut, Building2, User, Mail, CreditCard, Settings, Calendar, FileText, Layout, ExternalLink, Copy, Briefcase } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api';
@@ -348,6 +348,36 @@ export default function DashboardPage() {
                   Customize Intake Form
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Case Management Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Briefcase className="h-5 w-5 mr-2" />
+                Case Management
+              </CardTitle>
+              <CardDescription>Manage your cases with a visual Kanban board</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Status:</span>
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  Ready
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => window.location.href = '/cases'}
+              >
+                <Briefcase className="h-4 w-4 mr-2" />
+                View Kanban Board
+              </Button>
+              <p className="text-xs text-gray-500">
+                Organize and track your cases through different stages with drag-and-drop functionality
+              </p>
             </CardContent>
           </Card>
 

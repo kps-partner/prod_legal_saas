@@ -123,7 +123,7 @@ async def submit_intake_form(firm_id: str, submission: IntakeFormSubmission) -> 
             "client_phone": submission.client_phone or "",
             "description": submission.description,
             "case_type_id": submission.case_type_id,
-            "status": CaseStatus.NEW.value,
+            "status": CaseStatus.NEW_LEAD.value,
             "firm_id": firm_id,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()

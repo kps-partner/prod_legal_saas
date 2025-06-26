@@ -175,8 +175,10 @@ async def cancel_subscription(current_user: User):
         raise HTTPException(status_code=500, detail=str(e))
 
 async def handle_stripe_webhook(payload: bytes, sig_header: str):
+    print(f"=== WEBHOOK DEBUG START ===")
     print(f"Webhook received - Signature header: {sig_header}")
     print(f"Webhook secret configured: {settings.STRIPE_WEBHOOK_SECRET[:10]}...")
+    print(f"Payload length: {len(payload)} bytes")
     
     if not sig_header:
         print("ERROR: No stripe-signature header found")
@@ -186,26 +188,54 @@ async def handle_stripe_webhook(payload: bytes, sig_header: str):
         event = stripe.Webhook.construct_event(
             payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
         )
-        print(f"Successfully verified webhook event: {event['type']}")
+        print(f"✅ Successfully verified webhook event: {event['type']}")
+        print(f"Event ID: {event.get('id', 'Unknown')}")
     except ValueError as e:
         # Invalid payload
-        print(f"ERROR: Invalid payload - {str(e)}")
+        print(f"❌ ERROR: Invalid payload - {str(e)}")
         raise HTTPException(status_code=400, detail=f"Invalid payload: {str(e)}")
     except stripe.error.SignatureVerificationError as e:
         # Invalid signature
-        print(f"ERROR: Invalid signature - {str(e)}")
+        print(f"❌ ERROR: Invalid signature - {str(e)}")
         raise HTTPException(status_code=400, detail=f"Invalid signature: {str(e)}")
 
     # Handle the event
     if event["type"] == "checkout.session.completed":
+        print(f"🔄 Processing checkout.session.completed event")
         session = event["data"]["object"]
         customer_id = session.get("customer")
+        subscription_id = session.get("subscription")
+        
+        print(f"Session data - Customer ID: {customer_id}, Subscription ID: {subscription_id}")
+        print(f"Session mode: {session.get('mode')}")
+        print(f"Payment status: {session.get('payment_status')}")
+        
         if customer_id:
-            db.firms.update_one(
+            # Check if firm exists before updating
+            existing_firm = db.firms.find_one({"stripe_customer_id": customer_id})
+            print(f"Firm lookup result: {existing_firm is not None}")
+            if existing_firm:
+                print(f"Found firm: {existing_firm.get('name', 'Unknown')} (ID: {existing_firm.get('_id')})")
+            else:
+                print(f"❌ No firm found with stripe_customer_id: {customer_id}")
+                # Let's also check all firms to see what customer IDs exist
+                all_firms = list(db.firms.find({}, {"name": 1, "stripe_customer_id": 1}))
+                print(f"All firms in database: {len(all_firms)}")
+                for firm in all_firms[:5]:  # Show first 5 firms
+                    print(f"  - {firm.get('name', 'Unknown')}: {firm.get('stripe_customer_id', 'No customer ID')}")
+            
+            result = db.firms.update_one(
                 {"stripe_customer_id": customer_id},
                 {"$set": {"subscription_status": "active"}},
             )
-            print(f"Updated firm subscription status to active for customer: {customer_id}")
+            print(f"Database update result - Matched: {result.matched_count}, Modified: {result.modified_count}")
+            
+            if result.modified_count > 0:
+                print(f"✅ Successfully updated firm subscription status to active for customer: {customer_id}")
+            else:
+                print(f"❌ Failed to update firm - no documents modified for customer: {customer_id}")
+        else:
+            print(f"❌ No customer_id found in checkout session")
     elif event["type"] == "customer.subscription.updated":
         subscription = event["data"]["object"]
         customer_id = subscription.get("customer")

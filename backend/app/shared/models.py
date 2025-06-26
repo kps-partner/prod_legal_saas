@@ -34,9 +34,10 @@ class User(BaseModel):
 
 class CaseStatus(str, Enum):
     """Enum for case status values."""
-    NEW = "new"
-    IN_PROGRESS = "in_progress"
+    NEW_LEAD = "new_lead"
+    MEETING_SCHEDULED = "meeting_scheduled"
     PENDING_REVIEW = "pending_review"
+    ENGAGED = "engaged"
     CLOSED = "closed"
     ARCHIVED = "archived"
 
@@ -67,7 +68,7 @@ class Case(BaseModel):
     # Case details
     description: str
     case_type_id: str  # Reference to CaseType
-    status: CaseStatus = CaseStatus.NEW
+    status: CaseStatus = CaseStatus.NEW_LEAD
     # Firm association
     firm_id: str  # Reference to the firm handling this case
     # Timestamps
