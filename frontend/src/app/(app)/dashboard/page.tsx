@@ -4,12 +4,18 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogOut, Building2, User, Mail, CreditCard, Settings, Calendar } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { apiClient } from '@/lib/api';
 
 export default function DashboardPage() {
   const { user, logout, refreshUser } = useAuth();
   const searchParams = useSearchParams();
+  const [calendarStatus, setCalendarStatus] = useState<{
+    connected: boolean;
+    calendar_name?: string;
+    loading: boolean;
+  }>({ connected: false, loading: true });
 
   // Check if user returned from successful payment and refresh user data
   useEffect(() => {
@@ -24,6 +30,27 @@ export default function DashboardPage() {
       window.history.replaceState({}, '', url.toString());
     }
   }, [searchParams, refreshUser]);
+
+  // Fetch Google Calendar connection status
+  useEffect(() => {
+    const fetchCalendarStatus = async () => {
+      try {
+        const status = await apiClient.getGoogleCalendarStatus();
+        setCalendarStatus({
+          connected: status.connected,
+          calendar_name: status.calendar_name,
+          loading: false
+        });
+      } catch (error) {
+        console.error('Failed to fetch calendar status:', error);
+        setCalendarStatus({ connected: false, loading: false });
+      }
+    };
+
+    if (user) {
+      fetchCalendarStatus();
+    }
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -192,20 +219,39 @@ export default function DashboardPage() {
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Status:</span>
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                  Not Connected
-                </span>
+                {calendarStatus.loading ? (
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                    Loading...
+                  </span>
+                ) : (
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    calendarStatus.connected
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {calendarStatus.connected ? 'Connected' : 'Not Connected'}
+                  </span>
+                )}
               </div>
+              {calendarStatus.connected && calendarStatus.calendar_name && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Calendar:</span>
+                  <span className="text-sm text-gray-600">{calendarStatus.calendar_name}</span>
+                </div>
+              )}
               <Button
                 variant="outline"
                 className="w-full justify-start"
                 onClick={() => window.location.href = '/settings/integrations'}
               >
                 <Calendar className="h-4 w-4 mr-2" />
-                Connect Google Calendar
+                {calendarStatus.connected ? 'Manage Calendar' : 'Connect Google Calendar'}
               </Button>
               <p className="text-xs text-gray-500">
-                Connect your calendar to enable appointment scheduling
+                {calendarStatus.connected
+                  ? 'Calendar connected and ready for scheduling'
+                  : 'Connect your calendar to enable appointment scheduling'
+                }
               </p>
             </CardContent>
           </Card>
