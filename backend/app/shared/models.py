@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
+from enum import Enum
 
 
 class Firm(BaseModel):
@@ -24,6 +25,95 @@ class User(BaseModel):
     name: str
     role: str
     firm_id: str  # This will store the ObjectId as a string
+    
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True
+    }
+
+
+class CaseStatus(str, Enum):
+    """Enum for case status values."""
+    NEW = "new"
+    IN_PROGRESS = "in_progress"
+    PENDING_REVIEW = "pending_review"
+    CLOSED = "closed"
+    ARCHIVED = "archived"
+
+
+class CaseType(BaseModel):
+    """Case type model for MongoDB storage."""
+    id: Optional[str] = Field(default=None, alias="_id")
+    name: str  # e.g., "Personal Injury", "Family Law", "Criminal Defense"
+    firm_id: str  # Reference to the firm this case type belongs to
+    description: Optional[str] = None
+    is_active: bool = True  # Default to active when created
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True
+    }
+
+
+class Case(BaseModel):
+    """Case model for MongoDB storage."""
+    id: Optional[str] = Field(default=None, alias="_id")
+    # Client information
+    client_name: str
+    client_email: EmailStr
+    client_phone: str
+    # Case details
+    description: str
+    case_type_id: str  # Reference to CaseType
+    status: CaseStatus = CaseStatus.NEW
+    # Firm association
+    firm_id: str  # Reference to the firm handling this case
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True
+    }
+
+
+class Appointment(BaseModel):
+    """Appointment model for MongoDB storage."""
+    id: Optional[str] = Field(default=None, alias="_id")
+    case_id: str  # Reference to the Case this appointment is for
+    scheduled_time: datetime
+    duration_minutes: int = 60  # Default 1 hour appointment
+    title: Optional[str] = None
+    description: Optional[str] = None
+    # Calendar integration
+    calendar_event_id: Optional[str] = None  # Google Calendar event ID
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True
+    }
+
+
+class IntakePageSetting(BaseModel):
+    """Intake page settings model for MongoDB storage."""
+    id: Optional[str] = Field(default=None, alias="_id")
+    firm_id: str  # Reference to the firm these settings belong to
+    welcome_message: str = "Welcome to our law firm. Please fill out the form below to get started."
+    logo_url: Optional[str] = None
+    # Additional customization options
+    primary_color: Optional[str] = "#007bff"  # Default blue color
+    show_phone_field: bool = True
+    require_phone_field: bool = True
+    custom_fields: Optional[list] = None  # For future extensibility
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     model_config = {
         "populate_by_name": True,

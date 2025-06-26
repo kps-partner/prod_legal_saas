@@ -201,6 +201,282 @@ class ApiClient {
 
     return response.json();
   }
+
+  // Case Types Settings endpoints
+  async getCaseTypes(): Promise<CaseType[]> {
+    const response = await fetch(`${API_BASE_URL}/settings/case-types`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get case types');
+    }
+
+    return response.json();
+  }
+
+  async createCaseType(data: CaseTypeCreate): Promise<CaseType> {
+    const response = await fetch(`${API_BASE_URL}/settings/case-types`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to create case type');
+    }
+
+    return response.json();
+  }
+
+  async updateCaseType(id: string, data: CaseTypeUpdate): Promise<CaseType> {
+    const response = await fetch(`${API_BASE_URL}/settings/case-types/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to update case type');
+    }
+
+    return response.json();
+  }
+
+  async deleteCaseType(id: string): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/settings/case-types/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to delete case type');
+    }
+
+    return response.json();
+  }
+
+  // Intake Page Settings endpoints
+  async getIntakePageSettings(): Promise<IntakePageSetting> {
+    const response = await fetch(`${API_BASE_URL}/settings/intake-page`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get intake page settings');
+    }
+
+    return response.json();
+  }
+
+  async updateIntakePageSettings(data: IntakePageSettingUpdate): Promise<IntakePageSetting> {
+    const response = await fetch(`${API_BASE_URL}/settings/intake-page`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to update intake page settings');
+    }
+
+    return response.json();
+  }
+
+  // Public Intake Form endpoints (no authentication required)
+  async getPublicIntakePageData(firmId: string): Promise<PublicIntakePageData> {
+    const response = await fetch(`${API_BASE_URL}/public/intake/${firmId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get intake page data');
+    }
+
+    return response.json();
+  }
+
+  async submitPublicIntakeForm(firmId: string, data: IntakeFormSubmissionData): Promise<IntakeFormSubmissionResponse> {
+    const response = await fetch(`${API_BASE_URL}/public/intake/${firmId}/submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      try {
+        const error = await response.json();
+        // Handle FastAPI validation errors
+        if (error.detail) {
+          if (Array.isArray(error.detail)) {
+            // Pydantic validation errors
+            const validationErrors = error.detail.map((err: any) =>
+              `${err.loc?.join(' -> ') || 'Field'}: ${err.msg}`
+            ).join(', ');
+            throw new Error(`Validation error: ${validationErrors}`);
+          } else if (typeof error.detail === 'string') {
+            // Simple error message
+            throw new Error(error.detail);
+          }
+        }
+        throw new Error('Failed to submit intake form');
+      } catch (parseError) {
+        // If we can't parse the error response, throw a generic error
+        throw new Error('Failed to submit intake form. Please check all fields and try again.');
+      }
+    }
+
+    return response.json();
+  }
+
+  // Public Calendar Booking endpoints (no authentication required)
+  async getPublicAvailability(firmId: string): Promise<AvailabilityResponse> {
+    const response = await fetch(`${API_BASE_URL}/public/availability/${firmId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get availability');
+    }
+
+    return response.json();
+  }
+
+  async createPublicBooking(caseId: string, booking: BookingRequest): Promise<BookingResponse> {
+    const response = await fetch(`${API_BASE_URL}/public/booking/${caseId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(booking),
+    });
+
+    if (!response.ok) {
+      try {
+        const error = await response.json();
+        if (error.detail) {
+          if (Array.isArray(error.detail)) {
+            // Pydantic validation errors
+            const validationErrors = error.detail.map((err: any) =>
+              `${err.loc?.join(' -> ') || 'Field'}: ${err.msg}`
+            ).join(', ');
+            throw new Error(`Validation error: ${validationErrors}`);
+          } else if (typeof error.detail === 'string') {
+            // Simple error message
+            throw new Error(error.detail);
+          }
+        }
+        throw new Error('Failed to create booking');
+      } catch (parseError) {
+        throw new Error('Failed to create booking. Please try again.');
+      }
+    }
+
+    return response.json();
+  }
+}
+
+// Type definitions for Case Types and Intake Page Settings
+export interface CaseType {
+  id: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CaseTypeCreate {
+  name: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+export interface CaseTypeUpdate {
+  name?: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+export interface IntakePageSetting {
+  id: string;
+  welcome_message: string;
+  logo_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IntakePageSettingUpdate {
+  welcome_message?: string;
+  logo_url?: string;
+}
+
+// Public Intake Form types
+export interface PublicIntakePageData {
+  firm_name: string;
+  welcome_message: string;
+  logo_url?: string;
+  case_types: Array<{
+    id: string;
+    name: string;
+    description?: string;
+  }>;
+}
+
+export interface IntakeFormSubmissionData {
+  client_name: string;
+  client_email: string;
+  client_phone?: string;
+  case_type_id: string;
+  description: string;
+}
+
+export interface IntakeFormSubmissionResponse {
+  message: string;
+  case_id: string;
+  status: string;
 }
 
 export const apiClient = new ApiClient();
+// Calendar Booking types
+export interface AvailableTimeSlot {
+  start_time: string;
+  end_time: string;
+  formatted_time: string;
+}
+
+export interface AvailabilityResponse {
+  available_slots: AvailableTimeSlot[];
+  firm_name: string;
+}
+
+export interface BookingRequest {
+  start_time: string;
+  client_name: string;
+  client_email: string;
+}
+
+export interface BookingResponse {
+  success: boolean;
+  message: string;
+  appointment_id: string;
+  meeting_link?: string;
+}

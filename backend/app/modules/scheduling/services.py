@@ -14,7 +14,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Google OAuth2 configuration
-SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+SCOPES = [
+    'https://www.googleapis.com/auth/calendar.readonly',
+    'https://www.googleapis.com/auth/calendar.events'
+]
 REDIRECT_URI = 'http://127.0.0.1:8000/api/v1/integrations/google/callback'
 
 
@@ -193,3 +196,180 @@ def get_calendar_connection_status(firm_id: str) -> Dict[str, Any]:
             "calendar_name": None,
             "connected_at": None
         }
+
+
+def get_calendar_availability(firm_id: str, days: int = 14) -> List[Dict[str, Any]]:
+    """Get available time slots for a firm's calendar."""
+    try:
+        connection = get_calendar_connection(firm_id)
+        if not connection or not connection.calendar_id:
+            raise Exception("No calendar connection found for this firm")
+        
+        credentials = get_credentials_from_tokens(connection.access_token, connection.refresh_token)
+        credentials = refresh_access_token(credentials)
+        
+        service = build('calendar', 'v3', credentials=credentials)
+        
+        # Get current time and end time (14 days from now)
+        from datetime import datetime, timedelta
+        import pytz
+        
+        now = datetime.utcnow()
+        end_time = now + timedelta(days=days)
+        
+        # Get free/busy information
+        freebusy_query = {
+            'timeMin': now.isoformat() + 'Z',
+            'timeMax': end_time.isoformat() + 'Z',
+            'items': [{'id': connection.calendar_id}]
+        }
+        
+        freebusy_result = service.freebusy().query(body=freebusy_query).execute()
+        busy_times = freebusy_result['calendars'][connection.calendar_id].get('busy', [])
+        
+        # Generate available slots (9 AM to 5 PM, weekdays only)
+        available_slots = []
+        current_date = now.date()
+        
+        for day_offset in range(days):
+            check_date = current_date + timedelta(days=day_offset)
+            
+            # Skip weekends
+            if check_date.weekday() >= 5:  # Saturday = 5, Sunday = 6
+                continue
+            
+            # Generate hourly slots from 9 AM to 5 PM
+            for hour in range(9, 17):  # 9 AM to 4 PM (last slot starts at 4 PM)
+                slot_start = datetime.combine(check_date, datetime.min.time().replace(hour=hour))
+                slot_end = slot_start + timedelta(hours=1)
+                
+                # Skip past times
+                if slot_start <= now:
+                    continue
+                
+                # Check if slot conflicts with busy times
+                slot_is_free = True
+                for busy_period in busy_times:
+                    busy_start = datetime.fromisoformat(busy_period['start'].replace('Z', '+00:00')).replace(tzinfo=None)
+                    busy_end = datetime.fromisoformat(busy_period['end'].replace('Z', '+00:00')).replace(tzinfo=None)
+                    
+                    if (slot_start < busy_end and slot_end > busy_start):
+                        slot_is_free = False
+                        break
+                
+                if slot_is_free:
+                    available_slots.append({
+                        'start_time': slot_start,
+                        'end_time': slot_end,
+                        'formatted_time': slot_start.strftime('%A, %B %d at %I:%M %p')
+                    })
+        
+        return available_slots
+        
+    except Exception as e:
+        logger.error(f"Failed to get calendar availability for firm {firm_id}: {str(e)}")
+        raise Exception(f"Failed to get calendar availability: {str(e)}")
+
+
+def create_calendar_appointment(firm_id: str, case_id: str, start_time: datetime, client_name: str, client_email: str) -> Dict[str, Any]:
+    """Create a calendar appointment and return appointment details."""
+    try:
+        connection = get_calendar_connection(firm_id)
+        if not connection or not connection.calendar_id:
+            raise Exception("No calendar connection found for this firm")
+        
+        credentials = get_credentials_from_tokens(connection.access_token, connection.refresh_token)
+        credentials = refresh_access_token(credentials)
+        
+        service = build('calendar', 'v3', credentials=credentials)
+        
+        # Calculate end time (1 hour appointment)
+        end_time = start_time + timedelta(hours=1)
+        
+        # Create the event
+        event = {
+            'summary': f'Legal Consultation - {client_name}',
+            'description': f'Legal consultation with {client_name} ({client_email})\nCase ID: {case_id}',
+            'start': {
+                'dateTime': start_time.isoformat() + 'Z',
+                'timeZone': 'UTC',
+            },
+            'end': {
+                'dateTime': end_time.isoformat() + 'Z',
+                'timeZone': 'UTC',
+            },
+            'attendees': [
+                {'email': client_email, 'displayName': client_name}
+            ],
+            'conferenceData': {
+                'createRequest': {
+                    'requestId': f'meet-{case_id}-{int(start_time.timestamp())}',
+                    'conferenceSolutionKey': {'type': 'hangoutsMeet'}
+                }
+            },
+            'reminders': {
+                'useDefault': False,
+                'overrides': [
+                    {'method': 'email', 'minutes': 24 * 60},  # 1 day before
+                    {'method': 'popup', 'minutes': 30},       # 30 minutes before
+                ],
+            },
+        }
+        
+        # Create the event with conference data
+        created_event = service.events().insert(
+            calendarId=connection.calendar_id,
+            body=event,
+            conferenceDataVersion=1
+        ).execute()
+        
+        # Extract Google Meet link
+        meet_link = None
+        if 'conferenceData' in created_event and 'entryPoints' in created_event['conferenceData']:
+            for entry_point in created_event['conferenceData']['entryPoints']:
+                if entry_point['entryPointType'] == 'video':
+                    meet_link = entry_point['uri']
+                    break
+        
+        # Create appointment record in database
+        from app.core.db import get_database
+        from app.shared.models import Appointment
+        
+        db = get_database()
+        appointment_data = {
+            "case_id": case_id,
+            "scheduled_time": start_time,
+            "duration_minutes": 60,
+            "title": f"Legal Consultation - {client_name}",
+            "description": f"Legal consultation with {client_name}",
+            "calendar_event_id": created_event['id'],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        
+        result = db.appointments.insert_one(appointment_data)
+        appointment_id = str(result.inserted_id)
+        
+        # Update case status to 'Meeting Scheduled'
+        from app.shared.models import CaseStatus
+        db.cases.update_one(
+            {"_id": ObjectId(case_id)},
+            {"$set": {
+                "status": CaseStatus.IN_PROGRESS.value,
+                "updated_at": datetime.utcnow()
+            }}
+        )
+        
+        logger.info(f"Created appointment {appointment_id} for case {case_id}")
+        
+        return {
+            'appointment_id': appointment_id,
+            'calendar_event_id': created_event['id'],
+            'meeting_link': meet_link,
+            'start_time': start_time,
+            'end_time': end_time
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to create calendar appointment for case {case_id}: {str(e)}")
+        raise Exception(f"Failed to create calendar appointment: {str(e)}")

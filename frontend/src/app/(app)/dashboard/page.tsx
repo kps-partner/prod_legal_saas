@@ -3,7 +3,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Building2, User, Mail, CreditCard, Settings, Calendar } from 'lucide-react';
+import { LogOut, Building2, User, Mail, CreditCard, Settings, Calendar, FileText, Layout, ExternalLink, Copy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api';
@@ -16,6 +16,7 @@ export default function DashboardPage() {
     calendar_name?: string;
     loading: boolean;
   }>({ connected: false, loading: true });
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Check if user returned from successful payment and refresh user data
   useEffect(() => {
@@ -65,6 +66,26 @@ export default function DashboardPage() {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const getPublicIntakeUrl = () => {
+    if (!user?.firm_id) return '';
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/intake/${user.firm_id}`;
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(getPublicIntakeUrl());
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
+  };
+
+  const openPublicForm = () => {
+    window.open(getPublicIntakeUrl(), '_blank');
   };
 
   if (!user) {
@@ -232,6 +253,69 @@ export default function DashboardPage() {
                   : 'Connect your calendar to enable appointment scheduling'
                 }
               </p>
+            </CardContent>
+          </Card>
+
+          {/* Intake Page Settings Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Layout className="h-5 w-5 mr-2" />
+                Intake Page Settings
+              </CardTitle>
+              <CardDescription>Manage your public intake form and case types</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Public Intake URL:</label>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={getPublicIntakeUrl()}
+                    readOnly
+                    className="flex-1 px-3 py-2 text-xs font-mono bg-gray-50 border border-gray-200 rounded-md text-gray-600"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyToClipboard}
+                    className="flex-shrink-0"
+                  >
+                    <Copy className="h-3 w-3 mr-1" />
+                    {copySuccess ? 'Copied!' : 'Copy'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openPublicForm}
+                    className="flex-shrink-0"
+                  >
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    Open
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Share this URL with prospective clients to collect intake requests
+                </p>
+              </div>
+              <div className="border-t pt-3 space-y-2">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => window.location.href = '/settings/case-types'}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Manage Case Types
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => window.location.href = '/settings/intake-page'}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Customize Intake Form
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
