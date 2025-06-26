@@ -8,7 +8,7 @@ from googleapiclient.errors import HttpError
 from app.core.db import get_database
 from app.shared.models import ConnectedCalendar
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 logger = logging.getLogger(__name__)
@@ -211,7 +211,6 @@ def get_calendar_availability(firm_id: str, days: int = 14) -> List[Dict[str, An
         service = build('calendar', 'v3', credentials=credentials)
         
         # Get current time and end time (14 days from now)
-        from datetime import datetime, timedelta
         import pytz
         
         now = datetime.utcnow()
