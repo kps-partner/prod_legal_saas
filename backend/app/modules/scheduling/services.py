@@ -138,6 +138,17 @@ def update_selected_calendar(firm_id: str, calendar_id: str, calendar_name: str)
     """Update the selected calendar for a firm."""
     db = get_database()
     
+    logger.info(f"Attempting to update calendar for firm_id: {firm_id}")
+    logger.info(f"Calendar ID: {calendar_id}, Calendar Name: {calendar_name}")
+    
+    # First check if the connection exists
+    existing = db.connected_calendars.find_one({"firm_id": firm_id})
+    if not existing:
+        logger.error(f"No calendar connection found for firm_id: {firm_id}")
+        return False
+    
+    logger.info(f"Found existing connection: {existing['_id']}")
+    
     result = db.connected_calendars.update_one(
         {"firm_id": firm_id},
         {"$set": {
@@ -146,7 +157,9 @@ def update_selected_calendar(firm_id: str, calendar_id: str, calendar_name: str)
         }}
     )
     
-    return result.modified_count > 0
+    logger.info(f"Update result - matched: {result.matched_count}, modified: {result.modified_count}")
+    
+    return result.matched_count > 0  # Return true if we found the document, even if no modification was needed
 
 
 def get_calendar_connection(firm_id: str) -> Optional[ConnectedCalendar]:
