@@ -446,7 +446,7 @@ def create_calendar_appointment(firm_id: str, case_id: str, start_time: datetime
         db.cases.update_one(
             {"_id": ObjectId(case_id)},
             {"$set": {
-                "status": CaseStatus.IN_PROGRESS.value,
+                "status": CaseStatus.MEETING_SCHEDULED.value,
                 "updated_at": datetime.utcnow()
             }}
         )
