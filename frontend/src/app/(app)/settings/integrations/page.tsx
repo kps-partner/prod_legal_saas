@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, Calendar, AlertCircle, ExternalLink } from 'lucide-react';
+import { CheckCircle, Calendar, AlertCircle, ExternalLink, ArrowLeft } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 
 interface CalendarConnectionStatus {
@@ -138,7 +138,17 @@ export default function IntegrationsPage() {
   return (
     <div className="container mx-auto py-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Integrations</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Integrations</h1>
+          <Button
+            variant="outline"
+            onClick={() => window.location.href = '/dashboard'}
+            className="flex items-center space-x-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Dashboard</span>
+          </Button>
+        </div>
         
         {error && (
           <Alert className="mb-6" variant="destructive">

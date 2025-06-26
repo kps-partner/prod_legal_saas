@@ -88,27 +88,6 @@ export default function DashboardPage() {
               <h1 className="text-xl font-semibold text-gray-900">LawFirm OS</h1>
             </div>
             <div className="flex items-center space-x-4">
-              {/* Navigation Links - Always visible */}
-              <nav className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => window.location.href = '/settings/billing'}
-                  className="text-gray-600 hover:text-gray-900"
-                >
-                  <Settings className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Settings</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => window.location.href = '/settings/integrations'}
-                  className="text-gray-600 hover:text-gray-900"
-                >
-                  <Calendar className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Integrations</span>
-                </Button>
-              </nav>
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-gray-700 hidden sm:inline">Welcome, {user.name}</span>
                 <Button variant="outline" size="sm" onClick={handleLogout}>
