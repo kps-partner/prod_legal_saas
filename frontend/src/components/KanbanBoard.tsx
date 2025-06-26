@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Mail, Phone, Clock, AlertCircle, CheckCircle2, Users, FileText, Archive } from 'lucide-react';
+import { Calendar, Mail, Phone, Clock, AlertCircle, CheckCircle2, Users, FileText, Archive, ExternalLink } from 'lucide-react';
 
 interface Case {
   id: string;
@@ -77,6 +78,7 @@ const priorityConfig = {
 };
 
 export function KanbanBoard({ cases, onStatusChange, showArchived }: KanbanBoardProps) {
+  const router = useRouter();
   const [draggedCase, setDraggedCase] = useState<Case | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
@@ -122,6 +124,14 @@ export function KanbanBoard({ cases, onStatusChange, showArchived }: KanbanBoard
     return cases.filter(caseItem => caseItem.status === status);
   };
 
+  const handleCaseClick = (caseId: string, e: React.MouseEvent) => {
+    // Prevent navigation if clicking on buttons or during drag
+    if ((e.target as HTMLElement).closest('button') || draggedCase) {
+      return;
+    }
+    router.push(`/cases/${caseId}`);
+  };
+
   return (
     <div className="flex gap-6 overflow-x-auto pb-6">
       {visibleStatuses.map((status) => {
@@ -158,9 +168,10 @@ export function KanbanBoard({ cases, onStatusChange, showArchived }: KanbanBoard
               {statusCases.map((caseItem) => (
                 <Card
                   key={caseItem.id}
-                  className="cursor-move hover:shadow-md transition-shadow duration-200 bg-white"
+                  className="cursor-pointer hover:shadow-md transition-all duration-200 bg-white hover:bg-gray-50"
                   draggable
                   onDragStart={(e) => handleDragStart(e, caseItem)}
+                  onClick={(e) => handleCaseClick(caseItem.id, e)}
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">

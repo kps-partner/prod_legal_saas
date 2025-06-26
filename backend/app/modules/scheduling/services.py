@@ -451,6 +451,21 @@ def create_calendar_appointment(firm_id: str, case_id: str, start_time: datetime
             }}
         )
         
+        # Log timeline event for meeting scheduling
+        try:
+            from app.modules.timeline.services import create_timeline_event
+            create_timeline_event(
+                case_id=case_id,
+                firm_id=firm_id,
+                user_id=None,  # System-generated event, no specific user
+                event_type="meeting_scheduled",
+                content=f"Meeting scheduled with {client_name} for {start_time.strftime('%B %d, %Y at %I:%M %p')}"
+            )
+            logger.info(f"Timeline event logged for meeting scheduling: {case_id}")
+        except Exception as timeline_error:
+            # Log error but don't fail the entire appointment creation
+            logger.error(f"Failed to log timeline event for appointment {appointment_id}: {str(timeline_error)}")
+        
         logger.info(f"Successfully created appointment {appointment_id} for case {case_id}")
         
         return {

@@ -395,6 +395,50 @@ class ApiClient {
 
     return response.json();
   }
+
+  // Case Detail and Timeline endpoints
+  async getCaseById(caseId: string): Promise<CaseDetailResponse> {
+    const response = await fetch(`${API_BASE_URL}/cases/${caseId}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get case details');
+    }
+
+    return response.json();
+  }
+
+  async getCaseTimeline(caseId: string): Promise<TimelineResponse> {
+    const response = await fetch(`${API_BASE_URL}/cases/${caseId}/timeline`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get case timeline');
+    }
+
+    return response.json();
+  }
+
+  async addTimelineNote(caseId: string, content: string): Promise<TimelineEventResponse> {
+    const response = await fetch(`${API_BASE_URL}/cases/${caseId}/timeline`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ content }),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to add note');
+    }
+
+    return response.json();
+  }
 }
 
 // Type definitions for Case Types and Intake Page Settings
@@ -482,4 +526,35 @@ export interface BookingResponse {
   message: string;
   appointment_id: string;
   meeting_link?: string;
+}
+
+// Case Detail and Timeline types
+export interface CaseDetailResponse {
+  id: string;
+  client_name: string;
+  client_email: string;
+  client_phone: string;
+  description: string;
+  status: 'new_lead' | 'meeting_scheduled' | 'pending_review' | 'engaged' | 'closed' | 'archived';
+  priority: 'low' | 'medium' | 'high';
+  case_type_id: string;
+  firm_id: string;
+  created_at: string;
+  updated_at: string;
+  last_activity: string;
+}
+
+export interface TimelineEventResponse {
+  id: string;
+  case_id: string;
+  type: 'note' | 'status_change' | 'case_created';
+  content: string;
+  created_by: string;
+  created_at: string;
+  firm_id: string;
+}
+
+export interface TimelineResponse {
+  events: TimelineEventResponse[];
+  total: number;
 }

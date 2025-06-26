@@ -74,6 +74,9 @@ def update_case_status(case_id: str, new_status: CaseStatus, firm_id: str) -> Op
         if not case:
             return None
         
+        # Store old status for timeline logging
+        old_status = case.get("status")
+        
         # Update the case status
         update_result = db.cases.update_one(
             {"_id": ObjectId(case_id)},
@@ -88,6 +91,15 @@ def update_case_status(case_id: str, new_status: CaseStatus, firm_id: str) -> Op
         
         if update_result.modified_count == 0:
             return None
+        
+        # Log status change to timeline
+        from app.modules.timeline.services import create_timeline_event
+        create_timeline_event(
+            case_id=case_id,
+            firm_id=firm_id,
+            event_type="status_change",
+            content=f"Case status changed from {old_status} to {new_status.value}"
+        )
         
         # Get the updated case
         updated_case = db.cases.find_one({"_id": ObjectId(case_id)})

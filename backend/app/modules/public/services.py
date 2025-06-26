@@ -135,6 +135,21 @@ async def submit_intake_form(firm_id: str, submission: IntakeFormSubmission) -> 
         
         logger.info(f"New case created from intake form: {case_id} for firm {firm_id}")
         
+        # Log timeline event for case creation
+        try:
+            from app.modules.timeline.services import create_timeline_event
+            create_timeline_event(
+                case_id=case_id,
+                firm_id=firm_id,
+                user_id=None,  # System-generated event, no specific user
+                event_type="case_created",
+                content=f"Case created from intake form submission by {submission.client_name}"
+            )
+            logger.info(f"Timeline event logged for case creation: {case_id}")
+        except Exception as timeline_error:
+            # Log error but don't fail the entire submission
+            logger.error(f"Failed to log timeline event for case {case_id}: {str(timeline_error)}")
+        
         # Send confirmation email to client (async, non-blocking)
         try:
             firm_name = firm.get("name", "Law Firm")

@@ -122,6 +122,22 @@ class IntakePageSetting(BaseModel):
     }
 
 
+class TimelineEvent(BaseModel):
+    """Timeline event model for MongoDB storage."""
+    id: Optional[str] = Field(default=None, alias="_id")
+    case_id: str  # Reference to the Case this event belongs to
+    firm_id: str  # Reference to the firm for security/filtering
+    user_id: Optional[str] = None  # For user-generated notes, None for system events
+    type: str  # e.g., 'note', 'status_change', 'meeting_scheduled', 'case_created'
+    content: str  # The note content or description of the event
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True
+    }
+
+
 class ConnectedCalendar(BaseModel):
     """Connected calendar model for MongoDB storage."""
     id: Optional[str] = Field(default=None, alias="_id")

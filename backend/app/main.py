@@ -8,6 +8,7 @@ from app.modules.scheduling.router import router as scheduling_router
 from app.modules.firms.router import router as firms_router
 from app.modules.public.router import router as public_router
 from app.modules.cases.router import router as cases_router
+from app.modules.timeline.router import router as timeline_router
 
 
 @asynccontextmanager
@@ -36,6 +37,7 @@ app.include_router(scheduling_router, prefix="/api/v1/integrations", tags=["inte
 app.include_router(firms_router, prefix="/api/v1/settings", tags=["settings"])
 app.include_router(public_router, prefix="/api/v1/public", tags=["public"])
 app.include_router(cases_router, prefix="/api/v1/cases", tags=["cases"])
+app.include_router(timeline_router, prefix="/api/v1/cases", tags=["timeline"])
 
 # Add users router for the /me endpoint
 from fastapi import APIRouter, Depends
