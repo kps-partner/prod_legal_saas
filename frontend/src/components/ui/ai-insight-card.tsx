@@ -204,7 +204,18 @@ export function AIInsightCard({ insight, loading, error, onRefresh }: AIInsightC
 
         {/* Recommendations */}
         <div>
-          <h4 className="font-medium text-gray-900 mb-2">AI Recommendations</h4>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-medium text-gray-900">AI Recommendations</h4>
+            <div className="flex items-center gap-2">
+              <Badge className={`${config.color} flex items-center gap-1`}>
+                <RecommendationIcon className="h-3 w-3" />
+                {config.label}
+              </Badge>
+              <Badge variant="outline" className={`text-xs ${getConfidenceColor(insight.confidence_score)}`}>
+                {Math.round(insight.confidence_score * 100)}% confidence
+              </Badge>
+            </div>
+          </div>
           <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
             {insight.recommendations}
           </p>
