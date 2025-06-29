@@ -59,24 +59,30 @@ def read_users_me(current_user = Depends(get_current_user)):
             subscription_status = user_with_firm["subscription_status"]
             subscription_ends_at = user_with_firm["subscription_ends_at"]
             return UserResponse(
+                id=user.id,
                 email=user.email,
                 name=user.name,
                 role=user.role,
                 firm_id=user.firm_id,
+                status=getattr(user, 'status', 'active'),
                 subscription_status=subscription_status,
-                subscription_ends_at=subscription_ends_at
+                subscription_ends_at=subscription_ends_at,
+                last_password_change=getattr(user, 'last_password_change', None)
             )
     except Exception as e:
         print(f"Database error in /users/me: {e}")
     
     # Fallback for when database is not available (testing)
     return UserResponse(
+        id=current_user.id,
         email=current_user.email,
         name=current_user.name,
         role=current_user.role,
         firm_id=current_user.firm_id,
+        status=getattr(current_user, 'status', 'active'),
         subscription_status="inactive",
-        subscription_ends_at=None
+        subscription_ends_at=None,
+        last_password_change=getattr(current_user, 'last_password_change', None)
     )
 
 app.include_router(users_router, prefix="/api/v1/users", tags=["users"])

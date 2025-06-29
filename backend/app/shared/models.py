@@ -4,6 +4,19 @@ from datetime import datetime
 from enum import Enum
 
 
+class UserRole(str, Enum):
+    """Enum for user role values."""
+    ADMIN = "Admin"
+    PARALEGAL = "Paralegal"
+
+
+class UserStatus(str, Enum):
+    """Enum for user status values."""
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    PENDING_PASSWORD_CHANGE = "pending_password_change"
+
+
 class Firm(BaseModel):
     """Firm model for MongoDB storage."""
     id: Optional[str] = Field(default=None, alias="_id")
@@ -23,8 +36,13 @@ class User(BaseModel):
     email: EmailStr
     hashed_password: str
     name: str
-    role: str
+    role: str  # Keep as str for backward compatibility with existing "Admin" values
     firm_id: str  # This will store the ObjectId as a string
+    status: UserStatus = UserStatus.ACTIVE
+    password_expires_at: Optional[datetime] = None
+    created_by: Optional[str] = None  # User ID of admin who created this user
+    last_password_change: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None  # For soft delete functionality
     
     model_config = {
         "populate_by_name": True,

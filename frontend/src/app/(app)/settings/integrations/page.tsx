@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CheckCircle, Calendar, AlertCircle, ExternalLink, ArrowLeft } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { GmailPermissionAlert } from '@/components/GmailPermissionAlert';
+import { RoleGuard } from '@/components/RoleGuard';
 
 interface CalendarConnectionStatus {
   connected: boolean;
@@ -146,169 +147,171 @@ export default function IntegrationsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Integrations</h1>
-          <Button
-            variant="outline"
-            onClick={() => window.location.href = '/dashboard'}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Dashboard</span>
-          </Button>
-        </div>
-        
-        {error && (
-          <Alert className="mb-6" variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {success && (
-          <Alert className="mb-6">
-            <CheckCircle className="h-4 w-4" />
-            <AlertDescription>{success}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Gmail Permission Alert - Show when connected but missing Gmail permissions */}
-        {connectionStatus.connected && connectionStatus.needs_reauth && (
-          <div className="mb-6">
-            <GmailPermissionAlert onReauthSuccess={fetchConnectionStatus} />
+    <RoleGuard allowedRoles={['Admin']}>
+      <div className="container mx-auto py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-3xl font-bold">Integrations</h1>
+            <Button
+              variant="outline"
+              onClick={() => window.location.href = '/dashboard'}
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Dashboard</span>
+            </Button>
           </div>
-        )}
+          
+          {error && (
+            <Alert className="mb-6" variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <div className="grid gap-6">
-          {/* Google Calendar Integration */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Calendar className="h-6 w-6 text-blue-600" />
-                  <div>
-                    <CardTitle>Google Calendar</CardTitle>
-                    <CardDescription>
-                      Connect your Google Calendar to enable client scheduling
-                    </CardDescription>
-                  </div>
-                </div>
-                <Badge variant={connectionStatus.connected ? "default" : "secondary"}>
-                  {connectionStatus.connected ? "Connected" : "Not Connected"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {!connectionStatus.connected ? (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Connect your Google account to allow clients to book meetings directly on your calendar.
-                  </p>
-                  <Button 
-                    onClick={handleConnect} 
-                    disabled={connecting}
-                    className="flex items-center space-x-2"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    <span>{connecting ? 'Connecting...' : 'Connect Google Account'}</span>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2 text-sm text-green-600">
-                      <CheckCircle className="h-4 w-4" />
-                      <span>Google Calendar connected successfully</span>
+          {success && (
+            <Alert className="mb-6">
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Gmail Permission Alert - Show when connected but missing Gmail permissions */}
+          {connectionStatus.connected && connectionStatus.needs_reauth && (
+            <div className="mb-6">
+              <GmailPermissionAlert onReauthSuccess={fetchConnectionStatus} />
+            </div>
+          )}
+
+          <div className="grid gap-6">
+            {/* Google Calendar Integration */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="h-6 w-6 text-blue-600" />
+                    <div>
+                      <CardTitle>Google Calendar</CardTitle>
+                      <CardDescription>
+                        Connect your Google Calendar to enable client scheduling
+                      </CardDescription>
                     </div>
+                  </div>
+                  <Badge variant={connectionStatus.connected ? "default" : "secondary"}>
+                    {connectionStatus.connected ? "Connected" : "Not Connected"}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!connectionStatus.connected ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Connect your Google account to allow clients to book meetings directly on your calendar.
+                    </p>
                     <Button
                       onClick={handleConnect}
                       disabled={connecting}
-                      variant="outline"
-                      size="sm"
                       className="flex items-center space-x-2"
                     >
-                      <ExternalLink className="h-3 w-3" />
-                      <span>{connecting ? 'Reconnecting...' : 'Reconnect'}</span>
+                      <ExternalLink className="h-4 w-4" />
+                      <span>{connecting ? 'Connecting...' : 'Connect Google Account'}</span>
                     </Button>
                   </div>
-                  
-                  {connectionStatus.connected_at && (
-                    <p className="text-sm text-muted-foreground">
-                      Connected on {new Date(connectionStatus.connected_at).toLocaleDateString()}
-                    </p>
-                  )}
-                  
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      <strong>Need Gmail permissions?</strong> Click "Reconnect" to grant additional permissions for email notifications.
-                    </p>
-                  </div>
-
-                  {calendars.length > 0 && (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-sm font-medium">Select Calendar for Bookings</label>
-                        <p className="text-xs text-muted-foreground mb-2">
-                          Choose which calendar should be used for client appointments
-                        </p>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 text-sm text-green-600">
+                        <CheckCircle className="h-4 w-4" />
+                        <span>Google Calendar connected successfully</span>
                       </div>
-                      
-                      <div className="flex items-center space-x-3">
-                        <Select value={selectedCalendar} onValueChange={setSelectedCalendar}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Select a calendar" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {calendars.map((calendar) => (
-                              <SelectItem key={calendar.id} value={calendar.id}>
-                                <div className="flex items-center space-x-2">
-                                  <span>{calendar.summary}</span>
-                                  {calendar.primary && (
-                                    <Badge variant="outline" className="text-xs">Primary</Badge>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        
-                        <Button 
-                          onClick={handleSaveCalendar}
-                          disabled={!selectedCalendar || saving}
-                          size="sm"
-                        >
-                          {saving ? 'Saving...' : 'Save'}
-                        </Button>
-                      </div>
+                      <Button
+                        onClick={handleConnect}
+                        disabled={connecting}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center space-x-2"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        <span>{connecting ? 'Reconnecting...' : 'Reconnect'}</span>
+                      </Button>
+                    </div>
+                    
+                    {connectionStatus.connected_at && (
+                      <p className="text-sm text-muted-foreground">
+                        Connected on {new Date(connectionStatus.connected_at).toLocaleDateString()}
+                      </p>
+                    )}
+                    
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>Need Gmail permissions?</strong> Click "Reconnect" to grant additional permissions for email notifications.
+                      </p>
+                    </div>
 
-                      {connectionStatus.calendar_name && (
-                        <div className="p-3 bg-muted rounded-lg">
-                          <p className="text-sm">
-                            <strong>Current calendar:</strong> {connectionStatus.calendar_name}
+                    {calendars.length > 0 && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-sm font-medium">Select Calendar for Bookings</label>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Choose which calendar should be used for client appointments
                           </p>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        
+                        <div className="flex items-center space-x-3">
+                          <Select value={selectedCalendar} onValueChange={setSelectedCalendar}>
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Select a calendar" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {calendars.map((calendar) => (
+                                <SelectItem key={calendar.id} value={calendar.id}>
+                                  <div className="flex items-center space-x-2">
+                                    <span>{calendar.summary}</span>
+                                    {calendar.primary && (
+                                      <Badge variant="outline" className="text-xs">Primary</Badge>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          
+                          <Button
+                            onClick={handleSaveCalendar}
+                            disabled={!selectedCalendar || saving}
+                            size="sm"
+                          >
+                            {saving ? 'Saving...' : 'Save'}
+                          </Button>
+                        </div>
 
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                        {connectionStatus.calendar_name && (
+                          <div className="p-3 bg-muted rounded-lg">
+                            <p className="text-sm">
+                              <strong>Current calendar:</strong> {connectionStatus.calendar_name}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-          {/* Future integrations can be added here */}
-          <Card className="opacity-50">
-            <CardHeader>
-              <CardTitle className="text-muted-foreground">More Integrations Coming Soon</CardTitle>
-              <CardDescription>
-                We're working on additional integrations to enhance your workflow.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Future integrations can be added here */}
+            <Card className="opacity-50">
+              <CardHeader>
+                <CardTitle className="text-muted-foreground">More Integrations Coming Soon</CardTitle>
+                <CardDescription>
+                  We're working on additional integrations to enhance your workflow.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
         </div>
       </div>
-    </div>
+    </RoleGuard>
   );
 }

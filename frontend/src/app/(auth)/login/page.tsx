@@ -35,12 +35,16 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login({
+      const result = await login({
         username: formData.email,
         password: formData.password,
       });
       
-      router.push('/dashboard');
+      if (result.requiresPasswordChange) {
+        router.push('/change-password?forced=true');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

@@ -23,9 +23,11 @@ export interface User {
   name: string;
   firm_id: string;
   role: string;
-  is_active: boolean;
+  status: string;
   subscription_status: string;
   subscription_ends_at?: number | null;
+  last_password_change?: string | null;
+  password_expires_at?: string | null;
 }
 
 export interface ApiError {
@@ -439,6 +441,80 @@ class ApiClient {
 
     return response.json();
   }
+
+  // User Management endpoints (Admin only)
+  async getUsers(): Promise<UserListResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/settings/users`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get users');
+    }
+
+    return response.json();
+  }
+
+  async inviteUser(data: UserInviteRequest): Promise<UserInviteResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/settings/users/invite`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to invite user');
+    }
+
+    return response.json();
+  }
+
+  async updateUser(userId: string, data: UserUpdateRequest): Promise<User> {
+    const response = await fetch(`${API_BASE_URL}/auth/settings/users/${userId}`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to update user');
+    }
+
+    return response.json();
+  }
+
+  async deleteUser(userId: string): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/auth/settings/users/${userId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to delete user');
+    }
+
+    return response.json();
+  }
+
+  async changePassword(data: PasswordChangeRequest): Promise<PasswordChangeResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to change password');
+    }
+
+    return response.json();
+  }
 }
 
 // Type definitions for Case Types and Intake Page Settings
@@ -557,4 +633,47 @@ export interface TimelineEventResponse {
 export interface TimelineResponse {
   events: TimelineEventResponse[];
   total: number;
+}
+
+// User Management types
+export interface UserListItem {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  status: string;
+  last_password_change?: string | null;
+  created_at: string;
+}
+
+export interface UserListResponse {
+  users: UserListItem[];
+  total: number;
+}
+
+export interface UserInviteRequest {
+  email: string;
+  name: string;
+  role: string;
+}
+
+export interface UserInviteResponse {
+  message: string;
+  user_id: string;
+  temporary_password: string;
+}
+
+export interface UserUpdateRequest {
+  name?: string;
+  role?: string;
+  status?: string;
+}
+
+export interface PasswordChangeRequest {
+  current_password: string;
+  new_password: string;
+}
+
+export interface PasswordChangeResponse {
+  message: string;
 }

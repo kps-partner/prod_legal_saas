@@ -3,7 +3,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Building2, User, Mail, CreditCard, Settings, Calendar, FileText, Layout, ExternalLink, Copy, Briefcase } from 'lucide-react';
+import { LogOut, Building2, User, Mail, CreditCard, Settings, Calendar, FileText, Layout, ExternalLink, Copy, Briefcase, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api';
@@ -185,171 +185,177 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Subscription Status Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <CreditCard className="h-5 w-5 mr-2" />
-                Subscription Status
-              </CardTitle>
-              <CardDescription>Current billing and subscription information</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Status:</span>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  user.subscription_status === 'active'
-                    ? 'bg-green-100 text-green-800'
-                    : user.subscription_status === 'canceling'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : user.subscription_status === 'past_due'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : user.subscription_status === 'incomplete'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {user.subscription_status === 'active' ? 'Active' :
-                   user.subscription_status === 'canceling' ? 'Canceling' :
-                   user.subscription_status === 'past_due' ? 'Past Due' :
-                   user.subscription_status === 'incomplete' ? 'Incomplete' :
-                   user.subscription_status === 'inactive' ? 'Inactive' :
-                   user.subscription_status || 'Unknown'}
-                </span>
-              </div>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => window.location.href = '/settings/billing'}
-              >
-                <CreditCard className="h-4 w-4 mr-2" />
-                Manage Billing
-              </Button>
-              {user.subscription_status === 'canceling' ? (
-                <p className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
-                  {user.subscription_ends_at
-                    ? `Subscription ends on ${formatSubscriptionEndDate(user.subscription_ends_at)}`
-                    : 'Subscription canceling - Access until period end'
+          {/* Subscription Status Card - Admin Only */}
+          {user.role === 'Admin' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <CreditCard className="h-5 w-5 mr-2" />
+                  Subscription Status
+                </CardTitle>
+                <CardDescription>Current billing and subscription information</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Status:</span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    user.subscription_status === 'active'
+                      ? 'bg-green-100 text-green-800'
+                      : user.subscription_status === 'canceling'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : user.subscription_status === 'past_due'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : user.subscription_status === 'incomplete'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {user.subscription_status === 'active' ? 'Active' :
+                     user.subscription_status === 'canceling' ? 'Canceling' :
+                     user.subscription_status === 'past_due' ? 'Past Due' :
+                     user.subscription_status === 'incomplete' ? 'Incomplete' :
+                     user.subscription_status === 'inactive' ? 'Inactive' :
+                     user.subscription_status || 'Unknown'}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => window.location.href = '/settings/billing'}
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Manage Billing
+                </Button>
+                {user.subscription_status === 'canceling' ? (
+                  <p className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
+                    {user.subscription_ends_at
+                      ? `Subscription ends on ${formatSubscriptionEndDate(user.subscription_ends_at)}`
+                      : 'Subscription canceling - Access until period end'
+                    }
+                  </p>
+                ) : user.subscription_status !== 'active' && (
+                  <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                    Subscribe to unlock all features
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Google Calendar Integration Card - Admin Only */}
+          {user.role === 'Admin' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Calendar className="h-5 w-5 mr-2" />
+                  Google Calendar
+                </CardTitle>
+                <CardDescription>Connect your Google Calendar for scheduling</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Status:</span>
+                  {calendarStatus.loading ? (
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                      Loading...
+                    </span>
+                  ) : (
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      calendarStatus.connected
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {calendarStatus.connected ? 'Connected' : 'Not Connected'}
+                    </span>
+                  )}
+                </div>
+                {calendarStatus.connected && calendarStatus.calendar_name && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Calendar:</span>
+                    <span className="text-sm text-gray-600">{calendarStatus.calendar_name}</span>
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => window.location.href = '/settings/integrations'}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {calendarStatus.connected ? 'Manage Calendar' : 'Connect Google Calendar'}
+                </Button>
+                <p className="text-xs text-gray-500">
+                  {calendarStatus.connected
+                    ? 'Calendar connected and ready for scheduling'
+                    : 'Connect your calendar to enable appointment scheduling'
                   }
                 </p>
-              ) : user.subscription_status !== 'active' && (
-                <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                  Subscribe to unlock all features
-                </p>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Google Calendar Integration Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Calendar className="h-5 w-5 mr-2" />
-                Google Calendar
-              </CardTitle>
-              <CardDescription>Connect your Google Calendar for scheduling</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Status:</span>
-                {calendarStatus.loading ? (
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                    Loading...
-                  </span>
-                ) : (
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    calendarStatus.connected
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {calendarStatus.connected ? 'Connected' : 'Not Connected'}
-                  </span>
-                )}
-              </div>
-              {calendarStatus.connected && calendarStatus.calendar_name && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Calendar:</span>
-                  <span className="text-sm text-gray-600">{calendarStatus.calendar_name}</span>
+          {/* Intake Page Settings Card - Admin Only */}
+          {user.role === 'Admin' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Layout className="h-5 w-5 mr-2" />
+                  Intake Page Settings
+                </CardTitle>
+                <CardDescription>Manage your public intake form and case types</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Public Intake URL:</label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={getPublicIntakeUrl()}
+                      readOnly
+                      className="flex-1 px-3 py-2 text-xs font-mono bg-gray-50 border border-gray-200 rounded-md text-gray-600"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyToClipboard}
+                      className="flex-shrink-0"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      {copySuccess ? 'Copied!' : 'Copy'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={openPublicForm}
+                      className="flex-shrink-0"
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Open
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Share this URL with prospective clients to collect intake requests
+                  </p>
                 </div>
-              )}
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => window.location.href = '/settings/integrations'}
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                {calendarStatus.connected ? 'Manage Calendar' : 'Connect Google Calendar'}
-              </Button>
-              <p className="text-xs text-gray-500">
-                {calendarStatus.connected
-                  ? 'Calendar connected and ready for scheduling'
-                  : 'Connect your calendar to enable appointment scheduling'
-                }
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Intake Page Settings Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Layout className="h-5 w-5 mr-2" />
-                Intake Page Settings
-              </CardTitle>
-              <CardDescription>Manage your public intake form and case types</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Public Intake URL:</label>
-                <div className="flex space-x-2">
-                  <input
-                    type="text"
-                    value={getPublicIntakeUrl()}
-                    readOnly
-                    className="flex-1 px-3 py-2 text-xs font-mono bg-gray-50 border border-gray-200 rounded-md text-gray-600"
-                  />
+                <div className="border-t pt-3 space-y-2">
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={copyToClipboard}
-                    className="flex-shrink-0"
+                    className="w-full justify-start"
+                    onClick={() => window.location.href = '/settings/case-types'}
                   >
-                    <Copy className="h-3 w-3 mr-1" />
-                    {copySuccess ? 'Copied!' : 'Copy'}
+                    <FileText className="h-4 w-4 mr-2" />
+                    Manage Case Types
                   </Button>
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={openPublicForm}
-                    className="flex-shrink-0"
+                    className="w-full justify-start"
+                    onClick={() => window.location.href = '/settings/intake-page'}
                   >
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                    Open
+                    <Settings className="h-4 w-4 mr-2" />
+                    Customize Intake Form
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500">
-                  Share this URL with prospective clients to collect intake requests
-                </p>
-              </div>
-              <div className="border-t pt-3 space-y-2">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => window.location.href = '/settings/case-types'}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Manage Case Types
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => window.location.href = '/settings/intake-page'}
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Customize Intake Form
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Case Management Card */}
           <Card>
@@ -380,6 +386,38 @@ export default function DashboardPage() {
               </p>
             </CardContent>
           </Card>
+
+          {/* User Management Card - Admin Only */}
+          {user.role === 'Admin' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Users className="h-5 w-5 mr-2" />
+                  User Management
+                </CardTitle>
+                <CardDescription>Manage users and their roles in your firm</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Access Level:</span>
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    Admin Only
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => window.location.href = '/settings/users'}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Manage Users
+                </Button>
+                <p className="text-xs text-gray-500">
+                  Invite new users, manage roles, and control access permissions
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Quick Actions Card */}
           <Card>

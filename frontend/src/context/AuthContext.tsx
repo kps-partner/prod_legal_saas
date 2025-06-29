@@ -6,7 +6,7 @@ import { apiClient, User, LoginRequest, RegisterRequest } from '@/lib/api';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (data: LoginRequest) => Promise<void>;
+  login: (data: LoginRequest) => Promise<{ requiresPasswordChange: boolean }>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -51,6 +51,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const userData = await apiClient.getCurrentUser();
       setUser(userData);
+      
+      // Check if user needs to change password
+      if (userData.status === 'pending_password_change' ||
+          (userData.password_expires_at && new Date(userData.password_expires_at) < new Date())) {
+        // Don't throw error, let the component handle the redirect
+        return { requiresPasswordChange: true };
+      }
+      
+      return { requiresPasswordChange: false };
     } catch (error) {
       throw error;
     }
