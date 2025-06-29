@@ -1,0 +1,1 @@
+"""AI module for generating case insights and recommendations."""

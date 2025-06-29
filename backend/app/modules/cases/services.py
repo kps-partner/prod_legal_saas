@@ -28,14 +28,18 @@ def get_cases_for_firm(firm_id: str, include_archived: bool = False) -> CasesLis
         # Convert to response format
         case_responses = []
         for case in cases_list:
+            # Handle missing case_type_id field safely
+            case_type_id = case.get("case_type_id")
+            case_type_name = case_types.get(case_type_id, "Unknown") if case_type_id else "Unknown"
+            
             case_response = CaseResponse(
                 id=str(case["_id"]),
                 client_name=case["client_name"],
                 client_email=case["client_email"],
                 client_phone=case["client_phone"],
                 description=case["description"],
-                case_type_id=case["case_type_id"],
-                case_type_name=case_types.get(case["case_type_id"], "Unknown"),
+                case_type_id=case_type_id,  # This can be None
+                case_type_name=case_type_name,
                 status=case["status"],
                 priority=case.get("priority"),
                 firm_id=case["firm_id"],

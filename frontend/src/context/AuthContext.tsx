@@ -24,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('access_token');
+      
       if (token) {
         try {
           const userData = await apiClient.getCurrentUser();
@@ -31,8 +32,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (error) {
           console.error('Failed to get user data:', error);
           localStorage.removeItem('access_token');
+          setUser(null);
         }
+      } else {
+        setUser(null);
       }
+      
       setLoading(false);
     };
 

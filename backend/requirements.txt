@@ -11,3 +11,6 @@ google-auth-oauthlib
 stripe
 jinja2
 pytz
+celery[redis]
+openai
+redis

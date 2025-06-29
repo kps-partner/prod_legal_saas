@@ -8,18 +8,22 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { 
-  ArrowLeft, 
-  Mail, 
-  Phone, 
-  Clock, 
-  User, 
-  FileText, 
+import { Checkbox } from '@/components/ui/checkbox';
+import { AIInsightCard } from '@/components/ui/ai-insight-card';
+import {
+  ArrowLeft,
+  Mail,
+  Phone,
+  Clock,
+  User,
+  FileText,
   MessageSquare,
   Calendar,
   AlertCircle,
   Send,
-  Loader2
+  Loader2,
+  Brain,
+  Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -52,6 +56,16 @@ interface TimelineResponse {
   case_id: string;
   events: TimelineEvent[];
   total: number;
+}
+
+interface AIInsight {
+  case_id: string;
+  summary: string;
+  recommendations: string;
+  recommendation_type: 'approve' | 'reject' | 'undecided';
+  confidence_score: number;
+  generated_at: string;
+  status: 'processing' | 'completed' | 'failed';
 }
 
 const statusConfig = {
@@ -89,6 +103,14 @@ export default function CaseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [noteContent, setNoteContent] = useState('');
   const [submittingNote, setSubmittingNote] = useState(false);
+
+  // AI Insights state
+  const [aiInsight, setAiInsight] = useState<AIInsight | null>(null);
+  const [aiInsightLoading, setAiInsightLoading] = useState(false);
+  const [aiInsightError, setAiInsightError] = useState<string | null>(null);
+  const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
+  const [generatingInsight, setGeneratingInsight] = useState(false);
+  const [pollingTimeoutId, setPollingTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const accessToken = localStorage.getItem('access_token');
@@ -180,12 +202,261 @@ export default function CaseDetailPage() {
     }
   };
 
+  // AI Insights functions
+  const fetchAIInsights = async () => {
+    if (!token || !caseId) return;
+
+    try {
+      setAiInsightLoading(true);
+      setAiInsightError(null);
+      
+      const response = await fetch(`http://localhost:8000/api/v1/ai/insights/${caseId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data: AIInsight[] = await response.json();
+        // Take the most recent insight (first in the array)
+        setAiInsight(data.length > 0 ? data[0] : null);
+      } else if (response.status === 404) {
+        // No AI insights found yet
+        setAiInsight(null);
+      } else {
+        throw new Error(`Failed to fetch AI insights: ${response.statusText}`);
+      }
+    } catch (err) {
+      console.error('Error fetching AI insights:', err);
+      setAiInsightError(err instanceof Error ? err.message : 'Failed to fetch AI insights');
+    } finally {
+      setAiInsightLoading(false);
+    }
+  };
+
+  const generateAIInsights = async () => {
+    if (!token || !caseId || selectedNotes.size === 0 || generatingInsight) return;
+
+    try {
+      setGeneratingInsight(true);
+      setAiInsightError(null);
+
+      // Clear any existing polling
+      if (pollingTimeoutId) {
+        clearTimeout(pollingTimeoutId);
+        setPollingTimeoutId(null);
+      }
+
+      // Get selected timeline notes content
+      const selectedNotesContent = timeline
+        .filter(event => selectedNotes.has(event.id) && event.type === 'note')
+        .map(event => event.content)
+        .join('\n\n');
+
+      if (!selectedNotesContent.trim()) {
+        throw new Error('No note content selected for analysis');
+      }
+
+      const response = await fetch(`http://localhost:8000/api/v1/ai/insights/generate?case_id=${caseId}&notes_text=${encodeURIComponent(selectedNotesContent)}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate AI insights: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Start polling for completion
+      if (data.task_id) {
+        pollForInsights();
+      } else {
+        setGeneratingInsight(false);
+      }
+    } catch (err) {
+      console.error('Error generating AI insights:', err);
+      setAiInsightError(err instanceof Error ? err.message : 'Failed to generate AI insights');
+      setGeneratingInsight(false);
+    }
+  };
+
+  const pollForInsights = async () => {
+    // Clear any existing polling timeout
+    if (pollingTimeoutId) {
+      clearTimeout(pollingTimeoutId);
+      setPollingTimeoutId(null);
+    }
+
+    const maxAttempts = 30; // 30 seconds max
+    let attempts = 0;
+
+    const poll = async () => {
+      if (attempts >= maxAttempts) {
+        setAiInsightError('AI insights generation timed out. Please try again.');
+        setGeneratingInsight(false);
+        return;
+      }
+
+      try {
+        // Fetch insights and get the response directly
+        const response = await fetch(`http://localhost:8000/api/v1/ai/insights/${caseId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        attempts++;
+
+        if (response.ok) {
+          const data: AIInsight[] = await response.json();
+          if (data.length > 0) {
+            const latestInsight = data[0];
+            setAiInsight(latestInsight);
+            setGeneratingInsight(false);
+            
+            // Stop polling - we have insights
+            console.log('✅ AI insights found, stopping polling');
+            return;
+          }
+        } else if (response.status === 404) {
+          // No insights yet, continue polling
+          console.log(`⏳ No insights yet (attempt ${attempts}/${maxAttempts}), continuing...`);
+        } else if (response.status === 401) {
+          // Token expired, stop polling and show error
+          setAiInsightError('Authentication expired. Please refresh the page and try again.');
+          setGeneratingInsight(false);
+          return;
+        } else {
+          throw new Error(`Failed to fetch AI insights: ${response.statusText}`);
+        }
+        
+        // Continue polling if we don't have insights yet
+        if (attempts < maxAttempts) {
+          const timeoutId = setTimeout(poll, 1000); // Poll every second
+          setPollingTimeoutId(timeoutId);
+        } else {
+          setGeneratingInsight(false);
+        }
+      } catch (err) {
+        console.error('Error polling for insights:', err);
+        if (attempts < maxAttempts) {
+          const timeoutId = setTimeout(poll, 1000);
+          setPollingTimeoutId(timeoutId);
+        } else {
+          setAiInsightError('Failed to fetch AI insights. Please try again.');
+          setGeneratingInsight(false);
+        }
+      }
+    };
+
+    const initialTimeoutId = setTimeout(poll, 2000); // Start polling after 2 seconds
+    setPollingTimeoutId(initialTimeoutId);
+  };
+
+  const refreshAIInsights = async () => {
+    if (!token || !caseId || selectedNotes.size === 0 || generatingInsight) return;
+
+    try {
+      setGeneratingInsight(true);
+      setAiInsightError(null);
+
+      // Clear any existing polling
+      if (pollingTimeoutId) {
+        clearTimeout(pollingTimeoutId);
+        setPollingTimeoutId(null);
+      }
+
+      // Get selected timeline notes content
+      const selectedNotesContent = timeline
+        .filter(event => selectedNotes.has(event.id) && event.type === 'note')
+        .map(event => event.content)
+        .join('\n\n');
+
+      if (!selectedNotesContent.trim()) {
+        throw new Error('No note content selected for analysis');
+      }
+
+      const response = await fetch(`http://localhost:8000/api/v1/ai/insights/${caseId}/refresh`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          case_id: caseId,
+          notes_text: selectedNotesContent
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to refresh AI insights: ${response.statusText}`);
+      }
+
+      // Start polling for the new insights
+      pollForInsights();
+    } catch (err) {
+      console.error('Error refreshing AI insights:', err);
+      setAiInsightError(err instanceof Error ? err.message : 'Failed to refresh AI insights');
+      setGeneratingInsight(false);
+    }
+  };
+
+  const deleteAIInsights = async () => {
+    if (!token || !caseId) return;
+
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/ai/insights/${caseId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete AI insights: ${response.statusText}`);
+      }
+
+      setAiInsight(null);
+      setSelectedNotes(new Set());
+    } catch (err) {
+      console.error('Error deleting AI insights:', err);
+      setAiInsightError(err instanceof Error ? err.message : 'Failed to delete AI insights');
+    }
+  };
+
+  const toggleNoteSelection = (noteId: string) => {
+    const newSelection = new Set(selectedNotes);
+    if (newSelection.has(noteId)) {
+      newSelection.delete(noteId);
+    } else {
+      newSelection.add(noteId);
+    }
+    setSelectedNotes(newSelection);
+  };
+
   useEffect(() => {
     if (token && caseId) {
       fetchCaseData();
       fetchTimeline();
+      fetchAIInsights();
     }
   }, [token, caseId]);
+
+  // Cleanup polling timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingTimeoutId) {
+        clearTimeout(pollingTimeoutId);
+      }
+    };
+  }, [pollingTimeoutId]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -390,6 +661,80 @@ export default function CaseDetailPage() {
           </Card>
         </div>
 
+        {/* AI Insights */}
+        <div className="lg:col-span-2">
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5" />
+                AI Insights
+              </CardTitle>
+              <CardDescription>
+                AI-powered analysis and recommendations based on case notes
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {aiInsight ? (
+                <AIInsightCard
+                  insight={aiInsight}
+                  onRefresh={refreshAIInsights}
+                  loading={aiInsightLoading}
+                  error={aiInsightError}
+                />
+              ) : (
+                <div className="text-center py-8">
+                  {aiInsightError ? (
+                    <div className="text-red-600 mb-4">
+                      <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                      <p className="text-sm">{aiInsightError}</p>
+                    </div>
+                  ) : (
+                    <div className="text-gray-500 mb-4">
+                      <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No AI insights generated yet</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Select notes from the timeline below and generate insights
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-col items-center gap-4">
+                    {selectedNotes.size > 0 && (
+                      <div className="text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
+                        {selectedNotes.size} note{selectedNotes.size > 1 ? 's' : ''} selected for analysis
+                      </div>
+                    )}
+                    
+                    <Button
+                      onClick={generateAIInsights}
+                      disabled={selectedNotes.size === 0 || generatingInsight}
+                      className="flex items-center gap-2"
+                    >
+                      {generatingInsight ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generating Insights...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Generate AI Insights
+                        </>
+                      )}
+                    </Button>
+                    
+                    {selectedNotes.size === 0 && (
+                      <p className="text-xs text-gray-400 max-w-md text-center">
+                        Select one or more notes from the timeline below to analyze with AI
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Timeline */}
         <div className="lg:col-span-2">
           <Card>
@@ -397,9 +742,14 @@ export default function CaseDetailPage() {
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
                 Case Timeline
+                {selectedNotes.size > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {selectedNotes.size} selected
+                  </Badge>
+                )}
               </CardTitle>
               <CardDescription>
-                Chronological history of all case activities and notes
+                Chronological history of all case activities and notes. Select notes to analyze with AI.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -416,8 +766,15 @@ export default function CaseDetailPage() {
               ) : (
                 <div className="space-y-4">
                   {timeline.map((event, index) => {
+                    // Add comprehensive error handling for event types
+                    if (!event || !event.type) {
+                      return null;
+                    }
+                    
                     const config = eventTypeConfig[event.type as keyof typeof eventTypeConfig] || eventTypeConfig.note;
-                    const Icon = config.icon;
+                    const Icon = config?.icon || MessageSquare;
+                    const isNote = event.type === 'note';
+                    const isSelected = selectedNotes.has(event.id);
                     
                     return (
                       <div key={event.id} className="relative">
@@ -426,7 +783,18 @@ export default function CaseDetailPage() {
                           <div className="absolute left-6 top-12 w-0.5 h-8 bg-gray-200"></div>
                         )}
                         
-                        <div className={`flex gap-4 p-4 rounded-lg border ${config.color}`}>
+                        <div className={`flex gap-4 p-4 rounded-lg border ${config?.color || 'bg-blue-50 border-blue-200'} ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}>
+                          {/* Checkbox for notes */}
+                          {isNote && (
+                            <div className="flex-shrink-0 pt-1">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleNoteSelection(event.id)}
+                                className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                              />
+                            </div>
+                          )}
+                          
                           <div className="flex-shrink-0">
                             <div className="w-8 h-8 bg-white border-2 border-current rounded-full flex items-center justify-center">
                               <Icon className="h-4 w-4" />
@@ -438,8 +806,13 @@ export default function CaseDetailPage() {
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="text-sm font-medium text-gray-900">
-                                    {config.label}
+                                    {config?.label || 'Event'}
                                   </span>
+                                  {isNote && (
+                                    <Badge variant="outline" className="text-xs">
+                                      Selectable for AI
+                                    </Badge>
+                                  )}
                                   {event.user_name && (
                                     <span className="text-xs text-gray-500">
                                       by {event.user_name}

@@ -156,14 +156,17 @@ def get_timeline_events_with_user_info(case_id: str, firm_id: str) -> List[dict]
                 if user:
                     user_name = user.get("name")
             
+            # Handle both 'type' and 'event_type' fields for backward compatibility
+            event_type = event_data.get("type") or event_data.get("event_type", "unknown")
+            
             timeline_event = {
                 "id": event_data["_id"],
                 "case_id": event_data["case_id"],
                 "firm_id": event_data["firm_id"],
                 "user_id": event_data.get("user_id"),
                 "user_name": user_name,
-                "type": event_data["type"],
-                "content": event_data["content"],
+                "type": event_type,
+                "content": event_data.get("content", ""),
                 "created_at": event_data["created_at"]
             }
             

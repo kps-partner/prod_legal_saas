@@ -12,6 +12,13 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
     
+    # OpenAI Configuration
+    OPENAI_API_KEY: str
+    
+    # Celery Configuration
+    CELERY_BROKER_URL: str
+    CELERY_RESULT_BACKEND: str
+    
     # Gmail API Configuration
     GMAIL_API_SCOPES: list = [
         "https://www.googleapis.com/auth/calendar",

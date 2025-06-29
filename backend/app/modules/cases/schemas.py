@@ -11,7 +11,7 @@ class CaseResponse(BaseModel):
     client_email: EmailStr
     client_phone: str
     description: str
-    case_type_id: str
+    case_type_id: Optional[str] = None
     case_type_name: Optional[str] = None
     status: CaseStatus
     priority: Optional[str] = None

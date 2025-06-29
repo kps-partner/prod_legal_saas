@@ -266,33 +266,89 @@ frontend/
 *   **Version Control**: Commit all changes and push the `develop` branch to GitHub.
 *   **Verification Criteria**: When a user clicks a Kanban card, they are navigated to the case detail page. This page displays the client's submitted information and a timeline of events (form submission, meeting booked). The user can type notes into a text area, save them, and see them appear on the timeline.
 
-### Sprint S7: AI Summarization & Recommendation
-*   **Sprint ID & Name**: S7: AI Summarization & Recommendation
+### Sprint S7 (Final Plan): User-Driven AI Insights
+
+*   **Sprint ID & Name**: S7: User-Driven AI Insights
 *   **Project Context**: LawFirm OS is a SaaS application for law firms to streamline client intake, scheduling, and case triage using AI.
 *   **Previous Sprint's Accomplishments**: S6 delivered the detailed case profile page, where users can view a case's history and add manual notes from their consultations.
-*   **Goal**: To implement the core AI value proposition: automatically generate a summary and a viability recommendation from the user's pasted meeting notes.
+*   **Goal**: To empower users to generate actionable AI-powered summaries and recommendations on demand by selecting specific case notes, and to display these insights in a dedicated, clear, and up-to-date section on the case profile page.
 *   **Relevant Requirements**: FR-008 (AI Summarization), FR-009 (AI Recommendation).
-*   **Tasks**:
-    *   API Keys & Setup:
-        *   Instruct the developer to create an OpenAI API account.
-        *   Ask the developer for their OpenAI API Key and store it in the backend `.env` file.
-    *   Backend (AIModule & Worker Setup):
-        *   Add `celery`, `redis`, and `openai` to `requirements.txt`.
-        *   Configure Celery in the backend project to use a local Redis server as the broker.
-        *   Create a Celery task `tasks.generate_ai_insights(case_id, notes_text)`. This task will:
-            *   Construct a detailed prompt for the OpenAI API, including the notes, and ask for a summary and a structured recommendation (e.g., a JSON object with `recommendation: "Approve" | "Reject"`, and `justification: "text"`).
-            *   Call the OpenAI API.
-            *   Parse the response.
-            *   Create new `TimelineEvent` entries for the summary and the recommendation and save them to the database, linked to the case.
-        *   Modify the `POST /api/v1/cases/{caseId}/notes` endpoint. When notes are saved, it should now trigger the `generate_ai_insights` Celery task asynchronously.
-    *   Frontend (Next.js):
-        *   On the `/cases/[caseId]` page, implement a polling or WebSocket mechanism to check for the completion of the AI task.
-        *   When notes are submitted, show a "Generating AI summary..." indicator on the timeline.
-        *   Once the new AI-generated timeline events are available, the polling mechanism should fetch the latest data and display the summary and recommendation prominently in the timeline/case details section. The recommendation should be clearly labeled as an "AI Suggestion".
-    *   Local Environment:
-        *   Update project documentation to include instructions for running the Celery worker in a separate terminal: `celery -A app.workers.celery_worker worker --loglevel=info`.
-*   **Version Control**: Commit all changes and push the `develop` branch to GitHub.
-*   **Verification Criteria**: A user pastes meeting notes into the text area on a case page and saves them. A loading indicator appears. Within a minute, the page automatically updates to show an AI-generated summary and a clear "Approve" or "Reject" recommendation with justification, displayed as new items on the case timeline.
+
+#### High-Level Workflow Diagram
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend (Case Detail Page)
+    participant Backend (API)
+    participant Celery Worker
+    participant OpenAI
+
+    User->>Frontend: 1. Selects specific notes (checkboxes)
+    User->>Frontend: 2. Clicks "Generate AI Insight" button
+    Frontend->>Backend: 3. POST /api/v1/ai/insights/generate <br> (with case_id, selected_note_ids)
+    Backend-->>Frontend: 4. Responds with { "status": "processing" }
+    Backend->>Celery Worker: 5. Dispatches generate_ai_insights task
+    Frontend->>User: 6. Shows "Generating..." in AI Insight card
+
+    Celery Worker->>Backend: 7. Fetches content of selected notes
+    Celery Worker->>OpenAI: 8. Sends combined notes text for analysis
+    OpenAI-->>Celery Worker: 9. Returns summary & recommendation ("Approve" | "Reject" | "Undecided")
+    Celery Worker->>Backend: 10. Upserts AI Insight into database for the case
+
+    loop Every 5 seconds
+        Frontend->>Backend: 11. GET /api/v1/ai/insights/{case_id}
+        Backend-->>Frontend: 12. Returns latest AI Insight (or null if not ready)
+    end
+
+    Frontend->>User: 13. Displays the new insight in the AI Insight card
+    User->>Frontend: 14. (Later) Clicks "Refresh" on AI Insight card
+    Frontend-->>Backend: (repeats from step 3)
+```
+
+#### Detailed Tasks
+
+**1. Backend (AIModule, CasesModule & Worker)**
+
+*   **Database Model (`ai_insights` collection):**
+    *   Create a new Pydantic model and MongoDB collection for `AIInsight`.
+    *   Fields: `case_id` (indexed), `summary` (string), `recommendation` (string), `justification` (string), `created_at` (datetime), `source_note_ids` (list of strings).
+*   **API Endpoint (Generation):**
+    *   Create a new endpoint: `POST /api/v1/ai/insights/generate`.
+    *   The request body will contain `case_id` and a list of `note_ids`.
+    *   This endpoint will trigger the Celery task asynchronously.
+*   **API Endpoint (Retrieval):**
+    *   Create a new endpoint: `GET /api/v1/ai/insights/{case_id}`.
+    *   This will fetch and return the single, most recent `AIInsight` document for the given `case_id`.
+*   **Celery Task (`generate_ai_insights`):**
+    *   Modify the task to accept `case_id` and a list of `note_ids`.
+    *   The task will fetch the text content for each `note_id`.
+    *   It will construct a detailed prompt for the OpenAI API, instructing it to return a JSON object with a `summary`, a `recommendation`, and a `justification`. The `recommendation` field **must** be one of three specific values: `"Approve"`, `"Reject"`, or `"Undecided"`.
+    *   After receiving the response, it will perform an **upsert** on the `ai_insights` collection using the `case_id`, replacing any existing insight.
+
+**2. Frontend (Case Detail Page)**
+
+*   **Timeline Notes UI:**
+    *   Add a `Checkbox` component to each user-generated note on the timeline.
+*   **"Generate AI Insight" Button:**
+    *   Add a "Generate AI Insight" button, disabled unless at least one note is selected.
+    *   On click, it calls the generation endpoint.
+*   **AI Insight Card Component (`AIInsightCard.tsx`):**
+    *   Create a new `Card` component to display the AI Insight.
+    *   **States:**
+        *   **Empty:** "No AI Insight has been generated."
+        *   **Loading:** "Generating insight..."
+        *   **Display:** Shows the `summary` and `justification`. The `recommendation` ("Approve", "Reject", "Undecided") should be displayed prominently, with distinct visual cues (e.g., colors or icons).
+    *   **Refresh Button:** Include a "Refresh" icon button on the card to re-trigger the generation.
+*   **Polling Mechanism:**
+    *   After triggering generation, the frontend will poll the retrieval endpoint every 5 seconds until a result is returned, then update the card.
+
+**3. Verification Criteria**
+
+*   A user can select notes and click "Generate AI Insight".
+*   The frontend shows a loading state, then automatically updates with the AI summary and recommendation.
+*   The recommendation correctly displays as "Approve", "Reject", or "Undecided".
+*   Generating a new insight replaces the old one in the database and on the UI.
 
 ### Sprint S8: Final Touches (User Management & Notifications)
 *   **Sprint ID & Name**: S8: Final Touches (User Management & Notifications)
