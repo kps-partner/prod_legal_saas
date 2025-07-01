@@ -377,18 +377,10 @@ export default function DashboardPage() {
                   <Button
                     variant="outline"
                     className="w-full justify-start"
-                    onClick={() => window.location.href = '/settings/case-types'}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Manage Case Types
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
                     onClick={() => window.location.href = '/settings/intake-page'}
                   >
                     <Settings className="h-4 w-4 mr-2" />
-                    Customize Intake Form
+                    Intake Page & Case Types
                   </Button>
                 </div>
               </CardContent>

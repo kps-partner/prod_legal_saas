@@ -1,14 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Copy, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Save, Copy, ExternalLink, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { apiClient, IntakePageSetting, IntakePageSettingUpdate, User } from '@/lib/api';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { apiClient, IntakePageSetting, IntakePageSettingUpdate, User, CaseType, CaseTypeCreate, CaseTypeUpdate } from '@/lib/api';
 import { RoleGuard } from '@/components/RoleGuard';
 
 export default function IntakePageSettingsPage() {
@@ -25,6 +28,17 @@ export default function IntakePageSettingsPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // Case Types state
+  const [caseTypes, setCaseTypes] = useState<CaseType[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCaseType, setEditingCaseType] = useState<CaseType | null>(null);
+  const [caseTypeFormData, setCaseTypeFormData] = useState<CaseTypeCreate>({
+    name: '',
+    description: '',
+    is_active: true,
+  });
+  const [caseTypeSubmitting, setCaseTypeSubmitting] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -32,13 +46,15 @@ export default function IntakePageSettingsPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [settingsData, userData] = await Promise.all([
+      const [settingsData, userData, caseTypesData] = await Promise.all([
         apiClient.getIntakePageSettings(),
-        apiClient.getCurrentUser()
+        apiClient.getCurrentUser(),
+        apiClient.getCaseTypes()
       ]);
       
       setSettings(settingsData);
       setCurrentUser(userData);
+      setCaseTypes(caseTypesData);
       setFormData({
         welcome_message: settingsData.welcome_message,
         logo_url: settingsData.logo_url || '',
@@ -98,6 +114,86 @@ export default function IntakePageSettingsPage() {
     window.open(getPublicIntakeUrl(), '_blank');
   };
 
+  // Case Type Management Functions
+  const handleCreateCaseType = async () => {
+    try {
+      setCaseTypeSubmitting(true);
+      const newCaseType = await apiClient.createCaseType(caseTypeFormData);
+      setCaseTypes([...caseTypes, newCaseType]);
+      setIsDialogOpen(false);
+      resetCaseTypeForm();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create case type');
+    } finally {
+      setCaseTypeSubmitting(false);
+    }
+  };
+
+  const handleUpdateCaseType = async () => {
+    if (!editingCaseType) return;
+
+    try {
+      setCaseTypeSubmitting(true);
+      const updateData: CaseTypeUpdate = {
+        name: caseTypeFormData.name,
+        description: caseTypeFormData.description,
+        is_active: caseTypeFormData.is_active,
+      };
+      const updatedCaseType = await apiClient.updateCaseType(editingCaseType.id, updateData);
+      setCaseTypes(caseTypes.map(ct => ct.id === editingCaseType.id ? updatedCaseType : ct));
+      setIsDialogOpen(false);
+      resetCaseTypeForm();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update case type');
+    } finally {
+      setCaseTypeSubmitting(false);
+    }
+  };
+
+  const handleDeleteCaseType = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this case type?')) return;
+
+    try {
+      await apiClient.deleteCaseType(id);
+      setCaseTypes(caseTypes.filter(ct => ct.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete case type');
+    }
+  };
+
+  const openCreateDialog = () => {
+    setEditingCaseType(null);
+    resetCaseTypeForm();
+    setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (caseType: CaseType) => {
+    setEditingCaseType(caseType);
+    setCaseTypeFormData({
+      name: caseType.name,
+      description: caseType.description || '',
+      is_active: caseType.is_active,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const resetCaseTypeForm = () => {
+    setCaseTypeFormData({
+      name: '',
+      description: '',
+      is_active: true,
+    });
+    setEditingCaseType(null);
+  };
+
+  const handleCaseTypeSubmit = () => {
+    if (editingCaseType) {
+      handleUpdateCaseType();
+    } else {
+      handleCreateCaseType();
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto py-8">
@@ -143,7 +239,7 @@ export default function IntakePageSettingsPage() {
           </div>
         )}
 
-        <div className="grid gap-6">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Public Intake Form URL</CardTitle>
@@ -191,6 +287,7 @@ export default function IntakePageSettingsPage() {
               </div>
             </CardContent>
           </Card>
+          
           <Card>
             <CardHeader>
               <CardTitle>Welcome Message</CardTitle>
@@ -294,6 +391,82 @@ export default function IntakePageSettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Case Types Section */}
+          <div className="border-t pt-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-medium">Case Types</h3>
+                <p className="text-sm text-gray-500">
+                  Configure the different types of cases your firm handles. These will be available when creating intake forms.
+                </p>
+              </div>
+              <Button onClick={openCreateDialog}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Case Type
+              </Button>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                {caseTypes.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 mb-4">No case types configured yet.</p>
+                    <Button onClick={openCreateDialog}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Your First Case Type
+                    </Button>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {caseTypes.map((caseType) => (
+                        <TableRow key={caseType.id}>
+                          <TableCell className="font-medium">{caseType.name}</TableCell>
+                          <TableCell>{caseType.description || '-'}</TableCell>
+                          <TableCell>
+                            <Badge variant={caseType.is_active ? 'default' : 'secondary'}>
+                              {caseType.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(caseType.created_at).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditDialog(caseType)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteCaseType(caseType.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         <div className="mt-8 flex justify-end">
@@ -302,6 +475,74 @@ export default function IntakePageSettingsPage() {
             {submitting ? 'Saving Changes...' : 'Save Changes'}
           </Button>
         </div>
+
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>
+                {editingCaseType ? 'Edit Case Type' : 'Add New Case Type'}
+              </DialogTitle>
+              <DialogDescription>
+                {editingCaseType
+                  ? 'Update the case type information below.'
+                  : 'Create a new case type for your intake forms.'
+                }
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  value={caseTypeFormData.name}
+                  onChange={(e) => setCaseTypeFormData({ ...caseTypeFormData, name: e.target.value })}
+                  className="col-span-3"
+                  placeholder="e.g., Personal Injury"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  value={caseTypeFormData.description}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCaseTypeFormData({ ...caseTypeFormData, description: e.target.value })}
+                  className="col-span-3"
+                  placeholder="Brief description of this case type"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="is_active" className="text-right">
+                  Status
+                </Label>
+                <div className="col-span-3">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_active"
+                      checked={caseTypeFormData.is_active}
+                      onChange={(e) => setCaseTypeFormData({ ...caseTypeFormData, is_active: e.target.checked })}
+                      className="rounded"
+                    />
+                    <span>Active</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCaseTypeSubmit} disabled={caseTypeSubmitting || !caseTypeFormData.name.trim()}>
+                {caseTypeSubmitting ? 'Saving...' : (editingCaseType ? 'Update' : 'Create')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </RoleGuard>
   );
