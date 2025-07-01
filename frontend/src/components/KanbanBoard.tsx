@@ -121,7 +121,9 @@ export function KanbanBoard({ cases, onStatusChange, showArchived }: KanbanBoard
   };
 
   const getCasesByStatus = (status: Case['status']) => {
-    return cases.filter(caseItem => caseItem.status === status);
+    return cases
+      .filter(caseItem => caseItem.status === status)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   };
 
   const handleCaseClick = (caseId: string, e: React.MouseEvent) => {
@@ -174,17 +176,9 @@ export function KanbanBoard({ cases, onStatusChange, showArchived }: KanbanBoard
                   onClick={(e) => handleCaseClick(caseItem.id, e)}
                 >
                   <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-sm font-medium text-gray-900 line-clamp-2">
-                        {caseItem.client_name}
-                      </CardTitle>
-                      <Badge
-                        variant="secondary"
-                        className={`${priorityConfig[caseItem.priority]?.color || 'bg-gray-100 text-gray-800'} text-xs`}
-                      >
-                        {priorityConfig[caseItem.priority]?.label || 'Unknown'}
-                      </Badge>
-                    </div>
+                    <CardTitle className="text-sm font-medium text-gray-900 line-clamp-2">
+                      {caseItem.client_name}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0">
                     <CardDescription className="text-xs text-gray-600 line-clamp-2 mb-3">
