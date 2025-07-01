@@ -161,27 +161,65 @@ export default function DashboardPage() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {/* User Info Card */}
+          {/* Combined User Profile/Management Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <User className="h-5 w-5 mr-2" />
-                User Information
+                {user.role === 'Admin' ? (
+                  <>
+                    <Users className="h-5 w-5 mr-2" />
+                    User Management
+                  </>
+                ) : (
+                  <>
+                    <User className="h-5 w-5 mr-2" />
+                    User Profile
+                  </>
+                )}
               </CardTitle>
+              {user.role === 'Admin' && (
+                <CardDescription>Manage users and their roles in your firm</CardDescription>
+              )}
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex items-center text-sm">
-                <span className="font-medium w-16">Name:</span>
-                <span className="text-gray-600">{user.name}</span>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <div className="flex items-center text-sm">
+                  <span className="font-medium w-16">Name:</span>
+                  <span className="text-gray-600">{user.name}</span>
+                </div>
+                <div className="flex items-center text-sm">
+                  <Mail className="h-4 w-4 mr-2" />
+                  <span className="text-gray-600">{user.email}</span>
+                </div>
+                <div className="flex items-center text-sm">
+                  <span className="font-medium w-16">Role:</span>
+                  <span className="text-gray-600 capitalize">{user.role}</span>
+                </div>
               </div>
-              <div className="flex items-center text-sm">
-                <Mail className="h-4 w-4 mr-2" />
-                <span className="text-gray-600">{user.email}</span>
-              </div>
-              <div className="flex items-center text-sm">
-                <span className="font-medium w-16">Role:</span>
-                <span className="text-gray-600 capitalize">{user.role}</span>
-              </div>
+              
+              {user.role === 'Admin' && (
+                <>
+                  <div className="border-t pt-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-medium">Access Level:</span>
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Admin Only
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => window.location.href = '/settings/users'}
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      Manage Users
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Invite new users, manage roles, and control access permissions
+                    </p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -387,116 +425,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* User Management Card - Admin Only */}
-          {user.role === 'Admin' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  User Management
-                </CardTitle>
-                <CardDescription>Manage users and their roles in your firm</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Access Level:</span>
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                    Admin Only
-                  </span>
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => window.location.href = '/settings/users'}
-                >
-                  <Users className="h-4 w-4 mr-2" />
-                  Manage Users
-                </Button>
-                <p className="text-xs text-gray-500">
-                  Invite new users, manage roles, and control access permissions
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Quick Actions Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common tasks and shortcuts</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start" disabled>
-                Add New Client
-              </Button>
-              <Button variant="outline" className="w-full justify-start" disabled>
-                Schedule Appointment
-              </Button>
-              <Button variant="outline" className="w-full justify-start" disabled>
-                Create Case
-              </Button>
-              <p className="text-xs text-gray-500 mt-2">
-                Features coming in future sprints
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* System Status Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>System Status</CardTitle>
-              <CardDescription>Current system information</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Authentication:</span>
-                <span className="text-green-600 font-medium">✓ Connected</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Database:</span>
-                <span className="text-green-600 font-medium">✓ Connected</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Sprint:</span>
-                <span className="text-blue-600 font-medium">S3 In Progress</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Billing:</span>
-                <span className="text-green-600 font-medium">✓ Stripe Ready</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Calendar:</span>
-                <span className="text-yellow-600 font-medium">⚡ Google Ready</span>
-              </div>
-            </CardContent>
-          </Card>
         </div>
-
-        {/* Welcome Message */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Welcome to LawFirm OS</CardTitle>
-            <CardDescription>Your comprehensive law firm management solution</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="prose max-w-none">
-              <p className="text-gray-600 mb-4">
-                Congratulations! You have successfully completed Sprint S2 - Billing & Subscription Management.
-                Your Stripe integration is fully functional with secure payment processing, subscription management, and customer portal access.
-              </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-semibold text-blue-900 mb-2">Sprint S3 Progress - Google Calendar Integration:</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>✓ Google OAuth2 authentication flow</li>
-                  <li>✓ Calendar API integration backend</li>
-                  <li>✓ Integrations management UI</li>
-                  <li>✓ Calendar connection and selection</li>
-                  <li>• Next: Appointment scheduling system</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
       </main>
     </div>
