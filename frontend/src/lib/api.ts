@@ -645,6 +645,19 @@ class ApiClient {
 
     return response.json();
   }
+  async getAnalytics(timePeriod: string): Promise<AnalyticsResponse> {
+    const response = await fetch(`${API_BASE_URL}/analytics?time_period=${timePeriod}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get analytics data');
+    }
+
+    return response.json();
+  }
 }
 
 // Type definitions for Case Types and Intake Page Settings
@@ -882,4 +895,26 @@ export interface ConflictWarning {
 export interface ConflictResponse {
   conflicts: ConflictWarning[];
   message: string;
+}
+
+// Analytics types
+export interface KPIData {
+  newLeads: { value: number; trend?: number; description: string };
+  consultations: { value: number; trend?: number; description: string };
+  engagedClients: { value: number; trend?: number; description: string };
+  avgEngageTime: { value: string; trend?: number; description: string };
+  engageRate: { value: string; trend?: number; description: string };
+  consultRate: { value: string; trend?: number; description: string };
+  avgCloseTime: { value: string; trend?: number; description: string };
+}
+
+export interface ChartDataPoint {
+  date: string;
+  signedClients: number;
+  displayDate: string;
+}
+
+export interface AnalyticsResponse {
+  kpis: KPIData;
+  chartData: ChartDataPoint[];
 }

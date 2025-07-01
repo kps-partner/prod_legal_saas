@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { KPICard } from './KPICard';
 import { TimeSelector, TimePeriod } from './TimeSelector';
 import { SignedClientsChart } from './SignedClientsChart';
@@ -13,79 +13,57 @@ import {
   Target,
   Phone,
   FileText,
-  Timer
+  Timer,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
-
-// Mock data interfaces
-interface KPIData {
-  newLeads: { value: number; trend: number; description: string };
-  consultations: { value: number; trend: number; description: string };
-  engagedClients: { value: number; trend: number; description: string };
-  avgEngageTime: { value: string; trend: number; description: string };
-  engageRate: { value: string; trend: number; description: string };
-  consultRate: { value: string; trend: number; description: string };
-  pipelineValue: { value: string; trend: number; description: string };
-  avgCloseTime: { value: string; trend: number; description: string };
-}
-
-interface ChartDataPoint {
-  date: string;
-  signedClients: number;
-  displayDate: string;
-}
-
-// Mock data generator
-const generateMockData = (period: TimePeriod): { kpis: KPIData; chartData: ChartDataPoint[] } => {
-  // Base KPI data with variations based on time period
-  const baseKPIs: KPIData = {
-    newLeads: { value: 24, trend: 12, description: 'Total leads this period' },
-    consultations: { value: 18, trend: 6, description: 'Scheduled meetings' },
-    engagedClients: { value: 12, trend: 25, description: 'Signed clients' },
-    avgEngageTime: { value: '8.5 days', trend: -15, description: 'To engage clients' },
-    engageRate: { value: '50%', trend: 8, description: 'Conversion to signed' },
-    consultRate: { value: '75%', trend: -3, description: 'Show rate for meetings' },
-    pipelineValue: { value: '$45,000', trend: 18, description: 'Potential revenue' },
-    avgCloseTime: { value: '15.2 days', trend: 12, description: 'To close cases' },
-  };
-
-  // Adjust values based on time period
-  const multiplier = period === 'all_time' ? 5 : period === 'this_quarter' ? 3 : period === 'this_month' ? 2 : 1;
-  
-  const adjustedKPIs: KPIData = {
-    newLeads: { ...baseKPIs.newLeads, value: Math.round(baseKPIs.newLeads.value * multiplier) },
-    consultations: { ...baseKPIs.consultations, value: Math.round(baseKPIs.consultations.value * multiplier) },
-    engagedClients: { ...baseKPIs.engagedClients, value: Math.round(baseKPIs.engagedClients.value * multiplier) },
-    avgEngageTime: baseKPIs.avgEngageTime,
-    engageRate: baseKPIs.engageRate,
-    consultRate: baseKPIs.consultRate,
-    pipelineValue: { 
-      ...baseKPIs.pipelineValue, 
-      value: `$${(45000 * multiplier).toLocaleString()}` 
-    },
-    avgCloseTime: baseKPIs.avgCloseTime,
-  };
-
-  // Generate chart data
-  const chartData: ChartDataPoint[] = [];
-  const days = period === 'last_7_days' ? 7 : period === 'last_30_days' ? 30 : 30;
-  
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    
-    chartData.push({
-      date: date.toISOString().split('T')[0],
-      signedClients: Math.floor(Math.random() * 8) + 2, // Random between 2-10
-      displayDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    });
-  }
-
-  return { kpis: adjustedKPIs, chartData };
-};
+import { apiClient, AnalyticsResponse, KPIData, ChartDataPoint } from '@/lib/api';
 
 export function CaseAnalytics() {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('last_30_days');
-  const { kpis, chartData } = generateMockData(timePeriod);
+  const [data, setData] = useState<AnalyticsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await apiClient.getAnalytics(timePeriod);
+        setData(response);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load analytics data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [timePeriod]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        <span className="ml-2 text-gray-500">Loading analytics...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64 bg-red-50 border border-red-200 rounded-md">
+        <AlertCircle className="h-8 w-8 text-red-500" />
+        <span className="ml-2 text-red-700">{error}</span>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const { kpis, chartData } = data;
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -154,15 +132,6 @@ export function CaseAnalytics() {
           icon={<Phone className="h-5 w-5 text-white" />}
           color="bg-teal-500"
           tooltip="Percentage of scheduled consultations that actually occur (show rate). Calculated as (Completed Consultations ÷ Scheduled Consultations) × 100. Higher rates indicate better scheduling processes and client commitment."
-        />
-        <KPICard
-          title="Pipeline Value"
-          value={kpis.pipelineValue.value}
-          description={kpis.pipelineValue.description}
-          trend={kpis.pipelineValue.trend}
-          icon={<FileText className="h-5 w-5 text-white" />}
-          color="bg-teal-500"
-          tooltip="Total estimated revenue value of all active prospects in your sales pipeline. This includes potential fees from leads, scheduled consultations, and cases under review but not yet engaged."
         />
         <KPICard
           title="Avg Close Time"

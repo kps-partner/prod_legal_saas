@@ -8,16 +8,17 @@ interface KPICardProps {
   title: string;
   value: string | number;
   description: string;
-  trend: number;
+  trend?: number;
   icon: React.ReactNode;
   color: string;
   tooltip: string;
 }
 
-export function KPICard({ title, value, description, trend, icon, color, tooltip }: KPICardProps) {
+export function KPICard({ title, value, description, trend = 0, icon, color, tooltip }: KPICardProps) {
   const isPositive = trend > 0;
   const trendColor = isPositive ? 'text-green-600' : 'text-red-600';
   const TrendIcon = isPositive ? TrendingUp : TrendingDown;
+  const showTrend = trend !== undefined && trend !== 0; // Hide trend when no comparison data available
 
   return (
     <Tooltip>
@@ -41,13 +42,15 @@ export function KPICard({ title, value, description, trend, icon, color, tooltip
           <div className="text-2xl font-bold text-gray-900 mb-2">
             {value}
           </div>
-          <div className={cn("flex items-center text-xs", trendColor)}>
-            <TrendIcon className="h-3 w-3 mr-1" />
-            <span className="font-medium">
-              {isPositive ? '+' : ''}{Math.abs(trend)}%
-            </span>
-            <span className="text-gray-500 ml-1">vs last period</span>
-          </div>
+          {showTrend && (
+            <div className={cn("flex items-center text-xs", trendColor)}>
+              <TrendIcon className="h-3 w-3 mr-1" />
+              <span className="font-medium">
+                {isPositive ? '+' : ''}{Math.abs(trend)}%
+              </span>
+              <span className="text-gray-500 ml-1">vs last period</span>
+            </div>
+          )}
           <p className="text-xs text-gray-500 mt-1">
             {description}
           </p>

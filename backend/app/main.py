@@ -11,6 +11,7 @@ from app.modules.public.router import router as public_router
 from app.modules.cases.router import router as cases_router
 from app.modules.timeline.router import router as timeline_router
 from app.modules.ai.router import router as ai_router
+from app.modules.analytics.router import router as analytics_router
 
 
 @asynccontextmanager
@@ -42,6 +43,7 @@ app.include_router(public_router, prefix="/api/v1/public", tags=["public"])
 app.include_router(cases_router, prefix="/api/v1/cases", tags=["cases"])
 app.include_router(timeline_router, prefix="/api/v1/cases", tags=["timeline"])
 app.include_router(ai_router, prefix="/api/v1", tags=["ai"])
+app.include_router(analytics_router, prefix="/api/v1/analytics", tags=["analytics"])
 
 # Add users router for the /me endpoint
 from fastapi import APIRouter, Depends
