@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { KanbanBoard } from '@/components/KanbanBoard';
-import { CaseAnalytics } from '@/components/analytics/CaseAnalytics';
+import { CompactCaseAnalytics } from '@/components/analytics/CompactCaseAnalytics';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -108,8 +108,8 @@ export default function CasesPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
+      <div className="container mx-auto p-4">
+        <div className="flex items-center justify-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       </div>
@@ -118,7 +118,7 @@ export default function CasesPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-4">
         <Card className="border-red-200 bg-red-50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-700">
@@ -145,11 +145,11 @@ export default function CasesPage() {
 
   if (cases.length === 0) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Case Management</h1>
-            <p className="text-gray-600 mt-1">Manage your cases with a visual Kanban board</p>
+            <h1 className="text-2xl font-bold text-gray-900">Case Management</h1>
+            <p className="text-gray-600 text-sm mt-1">Manage your cases with a visual Kanban board</p>
           </div>
           <div className="flex items-center space-x-2">
             <Switch
@@ -196,11 +196,11 @@ export default function CasesPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Case Management</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900">Case Management</h1>
+          <p className="text-gray-600 text-sm mt-1">
             {showArchived ? 'Archived cases' : `${cases.length} active cases`}
           </p>
         </div>
@@ -215,8 +215,8 @@ export default function CasesPage() {
       </div>
 
       {/* Analytics Section */}
-      <div className="mb-8">
-        <CaseAnalytics />
+      <div className="mb-4">
+        <CompactCaseAnalytics />
       </div>
 
       {/* Kanban Board */}

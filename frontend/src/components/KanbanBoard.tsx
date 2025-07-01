@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CompactCaseCard } from './CompactCaseCard';
 import { Calendar, Mail, Phone, Clock, AlertCircle, CheckCircle2, Users, FileText, Archive, ExternalLink } from 'lucide-react';
 
 interface Case {
@@ -18,6 +19,16 @@ interface Case {
   created_at: string;
   updated_at: string;
   last_activity: string;
+}
+
+interface AIInsight {
+  case_id: string;
+  summary: string;
+  recommendations: string;
+  recommendation_type: 'approve' | 'reject' | 'undecided';
+  confidence_score: number;
+  generated_at: string;
+  status: 'processing' | 'completed' | 'failed';
 }
 
 interface KanbanBoardProps {
@@ -82,8 +93,93 @@ export function KanbanBoard({ cases, onStatusChange, showArchived }: KanbanBoard
   const [draggedCase, setDraggedCase] = useState<Case | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
+  // Simplified AI insights state management (extracted from working case details page)
+  const [aiInsights, setAiInsights] = useState<Record<string, AIInsight | null>>({});
+  const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
+  const [aiErrors, setAiErrors] = useState<Record<string, string | null>>({});
+  const [token, setToken] = useState<string | null>(null);
+
+  // Get token on mount
+  useEffect(() => {
+    const accessToken = localStorage.getItem('access_token');
+    setToken(accessToken);
+  }, []);
+
+  // Fetch AI insights for a specific case (extracted from case details page)
+  const fetchAIInsightsForCase = async (caseId: string) => {
+    if (!token || !caseId || aiLoading[caseId]) return;
+
+    // Skip if we already have insights and no error
+    if (aiInsights[caseId] && !aiErrors[caseId]) return;
+
+    try {
+      setAiLoading(prev => ({ ...prev, [caseId]: true }));
+      setAiErrors(prev => ({ ...prev, [caseId]: null }));
+      
+      console.log(`🔍 Fetching AI insights for case ${caseId}...`);
+      
+      const response = await fetch(`http://localhost:8000/api/v1/ai/insights/${caseId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data: AIInsight[] = await response.json();
+        const insight = data.length > 0 ? data[0] : null;
+        setAiInsights(prev => ({ ...prev, [caseId]: insight }));
+        console.log(`✅ AI insights fetched for case ${caseId}:`, insight?.recommendation_type || 'none');
+      } else if (response.status === 404) {
+        // No AI insights found yet
+        setAiInsights(prev => ({ ...prev, [caseId]: null }));
+        console.log(`ℹ️ No AI insights found for case ${caseId}`);
+      } else {
+        throw new Error(`Failed to fetch AI insights: ${response.statusText}`);
+      }
+    } catch (err) {
+      console.error(`❌ Error fetching AI insights for case ${caseId}:`, err);
+      setAiErrors(prev => ({
+        ...prev,
+        [caseId]: err instanceof Error ? err.message : 'Failed to fetch AI insights'
+      }));
+    } finally {
+      setAiLoading(prev => ({ ...prev, [caseId]: false }));
+    }
+  };
+
+  // Fetch AI insights for all cases when token is available
+  useEffect(() => {
+    if (token && cases.length > 0) {
+      console.log(`🚀 Starting AI insights fetch for ${cases.length} cases...`);
+      cases.forEach(caseItem => {
+        fetchAIInsightsForCase(caseItem.id);
+      });
+    }
+  }, [token, cases]);
+
+  // Helper functions to match the old useAIInsights interface
+  const getInsight = (caseId: string) => aiInsights[caseId] || null;
+  const isLoading = (caseId: string) => aiLoading[caseId] || false;
+  const getError = (caseId: string) => aiErrors[caseId] || null;
+  
+  // Debug logging for AI insights
+  if (process.env.NODE_ENV === 'development') {
+    console.log('KanbanBoard AI Debug:', {
+      totalCases: cases.length,
+      caseIds: cases.slice(0, 3).map(c => c.id), // Show first 3 case IDs
+      sampleInsights: cases.slice(0, 3).map(c => ({
+        caseId: c.id,
+        hasInsight: !!getInsight(c.id),
+        isLoading: isLoading(c.id),
+        error: getError(c.id),
+        insight: getInsight(c.id)
+      }))
+    });
+  }
+
   // Filter statuses based on showArchived
-  const visibleStatuses = showArchived 
+  const visibleStatuses = showArchived
     ? ['archived'] as const
     : ['new_lead', 'meeting_scheduled', 'pending_review', 'engaged', 'closed'] as const;
 
@@ -166,106 +262,18 @@ export function KanbanBoard({ cases, onStatusChange, showArchived }: KanbanBoard
             </div>
 
             {/* Cases */}
-            <div className="p-4 space-y-3 min-h-[200px]">
+            <div className="p-4 space-y-2 min-h-[200px]">
               {statusCases.map((caseItem) => (
-                <Card
+                <CompactCaseCard
                   key={caseItem.id}
-                  className="cursor-pointer hover:shadow-md transition-all duration-200 bg-white hover:bg-gray-50"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, caseItem)}
-                  onClick={(e) => handleCaseClick(caseItem.id, e)}
-                >
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-900 line-clamp-2">
-                      {caseItem.client_name}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <CardDescription className="text-xs text-gray-600 line-clamp-2 mb-3">
-                      {caseItem.description}
-                    </CardDescription>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Mail className="h-3 w-3" />
-                        <span className="truncate">{caseItem.client_email}</span>
-                      </div>
-                      
-                      {caseItem.client_phone && (
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <Phone className="h-3 w-3" />
-                          <span>{caseItem.client_phone}</span>
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Clock className="h-3 w-3" />
-                        <span>Created {formatDate(caseItem.created_at)}</span>
-                      </div>
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <div className="flex gap-1">
-                        {status !== 'closed' && status !== 'archived' && (
-                          <>
-                            {status === 'new_lead' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs h-6 px-2"
-                                onClick={() => onStatusChange(caseItem.id, 'meeting_scheduled')}
-                              >
-                                Schedule
-                              </Button>
-                            )}
-                            {status === 'meeting_scheduled' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs h-6 px-2"
-                                onClick={() => onStatusChange(caseItem.id, 'pending_review')}
-                              >
-                                Review
-                              </Button>
-                            )}
-                            {status === 'pending_review' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs h-6 px-2"
-                                onClick={() => onStatusChange(caseItem.id, 'engaged')}
-                              >
-                                Engage
-                              </Button>
-                            )}
-                            {status === 'engaged' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs h-6 px-2"
-                                onClick={() => onStatusChange(caseItem.id, 'closed')}
-                              >
-                                Close
-                              </Button>
-                            )}
-                          </>
-                        )}
-                        
-                        {status === 'closed' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-6 px-2"
-                            onClick={() => onStatusChange(caseItem.id, 'archived')}
-                          >
-                            Archive
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  caseItem={caseItem}
+                  onStatusChange={onStatusChange}
+                  onCaseClick={handleCaseClick}
+                  onDragStart={handleDragStart}
+                  aiInsight={getInsight(caseItem.id)}
+                  aiLoading={isLoading(caseItem.id)}
+                  aiError={getError(caseItem.id)}
+                />
               ))}
 
               {statusCases.length === 0 && (

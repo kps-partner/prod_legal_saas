@@ -204,7 +204,10 @@ export default function CaseDetailPage() {
 
   // AI Insights functions
   const fetchAIInsights = async () => {
-    if (!token || !caseId) return;
+    if (!token || !caseId || aiInsightLoading) return;
+
+    // Skip if we already have insights and no error
+    if (aiInsight && !aiInsightError) return;
 
     try {
       setAiInsightLoading(true);
@@ -443,9 +446,14 @@ export default function CaseDetailPage() {
 
   useEffect(() => {
     if (token && caseId) {
-      fetchCaseData();
-      fetchTimeline();
-      fetchAIInsights();
+      // Fetch case data first, then timeline and AI insights in parallel
+      fetchCaseData().then(() => {
+        // Only fetch timeline and AI insights after case data is loaded
+        Promise.all([
+          fetchTimeline(),
+          fetchAIInsights()
+        ]);
+      });
     }
   }, [token, caseId]);
 
