@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Users, Calendar, Brain } from 'lucide-react';
+import { Building2, Users, Calendar, Brain, Clock, TrendingUp, Zap, Target } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -129,33 +129,57 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* Sprint Progress */}
-        <Card className="mb-16">
-          <CardHeader>
-            <CardTitle>Development Progress</CardTitle>
-            <CardDescription>Current implementation status</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">Sprint S1: Core User & Firm Onboarding</span>
-                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm">✓ Complete</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="font-medium">Sprint S2: Stripe Subscription & Billing</span>
-                <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-sm">Upcoming</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="font-medium">Sprint S3: Client Intake & Management</span>
-                <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-sm">Planned</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="font-medium">Sprint S4: AI-Powered Case Triage</span>
-                <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-sm">Planned</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Benefits Section */}
+        <div className="text-center mb-12">
+          <h3 className="text-3xl font-bold text-gray-900 mb-4">
+            Why Law Firms Choose LawFirm OS
+          </h3>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Proven results that transform your practice with measurable efficiency gains
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+          <Card className="text-center p-6">
+            <CardContent className="pt-6">
+              <Clock className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+              <h4 className="text-2xl font-bold text-gray-900 mb-2">Save 10+ Hours Weekly</h4>
+              <p className="text-gray-600">
+                Automate administrative tasks and focus on high-value legal work that drives revenue
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="text-center p-6">
+            <CardContent className="pt-6">
+              <TrendingUp className="h-12 w-12 text-green-600 mx-auto mb-4" />
+              <h4 className="text-2xl font-bold text-gray-900 mb-2">40% Higher Conversion</h4>
+              <p className="text-gray-600">
+                Smart intake forms and automated follow-up systems increase client acquisition rates
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="text-center p-6">
+            <CardContent className="pt-6">
+              <Zap className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+              <h4 className="text-2xl font-bold text-gray-900 mb-2">50% Faster Processing</h4>
+              <p className="text-gray-600">
+                AI-powered case triage and workflow automation accelerate case resolution times
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="text-center p-6">
+            <CardContent className="pt-6">
+              <Target className="h-12 w-12 text-orange-600 mx-auto mb-4" />
+              <h4 className="text-2xl font-bold text-gray-900 mb-2">3x Return on Investment</h4>
+              <p className="text-gray-600">
+                Measurable efficiency gains that pay for the platform within months of implementation
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </main>
     </div>
   );
