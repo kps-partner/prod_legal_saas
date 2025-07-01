@@ -5,6 +5,7 @@ from app.core.db import check_db_connection, client
 from app.modules.auth.router import router as auth_router
 from app.modules.billing.router import router as billing_router
 from app.modules.scheduling.router import router as scheduling_router
+from app.modules.availability.router import router as availability_router
 from app.modules.firms.router import router as firms_router
 from app.modules.public.router import router as public_router
 from app.modules.cases.router import router as cases_router
@@ -35,6 +36,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["authentication"])
 app.include_router(billing_router, prefix="/api/v1/billing", tags=["billing"])
 app.include_router(scheduling_router, prefix="/api/v1/integrations", tags=["integrations"])
+app.include_router(availability_router, prefix="/api/v1/integrations", tags=["integrations"])
 app.include_router(firms_router, prefix="/api/v1/settings", tags=["settings"])
 app.include_router(public_router, prefix="/api/v1/public", tags=["public"])
 app.include_router(cases_router, prefix="/api/v1/cases", tags=["cases"])

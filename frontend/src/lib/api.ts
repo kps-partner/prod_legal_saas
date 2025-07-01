@@ -515,6 +515,126 @@ class ApiClient {
 
     return response.json();
   }
+
+  // Availability Management endpoints
+  async getTimezones(): Promise<TimezonesResponse> {
+    const response = await fetch(`${API_BASE_URL}/integrations/timezones`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get timezones');
+    }
+
+    return response.json();
+  }
+
+  async getAvailability(): Promise<AvailabilitySettings> {
+    const response = await fetch(`${API_BASE_URL}/integrations/availability`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get availability settings');
+    }
+
+    return response.json();
+  }
+
+  async updateAvailability(data: AvailabilityUpdateRequest): Promise<AvailabilitySettings> {
+    const response = await fetch(`${API_BASE_URL}/integrations/availability`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to update availability settings');
+    }
+
+    return response.json();
+  }
+
+  async getBlockedDates(): Promise<BlockedDatesResponse> {
+    const response = await fetch(`${API_BASE_URL}/integrations/blocked-dates`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to get blocked dates');
+    }
+
+    return response.json();
+  }
+
+  async createBlockedDate(data: BlockedDateCreateRequest): Promise<BlockedDate> {
+    const response = await fetch(`${API_BASE_URL}/integrations/blocked-dates`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to create blocked date');
+    }
+
+    return response.json();
+  }
+
+  async checkBlockedDateConflicts(data: BlockedDateCreateRequest): Promise<ConflictResponse> {
+    const response = await fetch(`${API_BASE_URL}/integrations/blocked-dates/check-conflicts`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to check conflicts');
+    }
+
+    return response.json();
+  }
+
+  async checkAppointmentConflicts(startDate: string, endDate: string): Promise<ConflictResponse> {
+    const response = await fetch(`${API_BASE_URL}/integrations/blocked-dates/check-conflicts`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({
+        start_date: startDate,
+        end_date: endDate,
+      }),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to check appointment conflicts');
+    }
+
+    return response.json();
+  }
+
+  async deleteBlockedDate(blockedDateId: string): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/integrations/blocked-dates/${blockedDateId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new Error(error.detail || 'Failed to delete blocked date');
+    }
+
+    return response.json();
+  }
 }
 
 // Type definitions for Case Types and Intake Page Settings
@@ -675,5 +795,79 @@ export interface PasswordChangeRequest {
 }
 
 export interface PasswordChangeResponse {
+  message: string;
+}
+
+// Availability Management types
+export interface TimeSlot {
+  enabled: boolean;
+  start_time: string;
+  end_time: string;
+}
+
+export interface WeeklySchedule {
+  monday: TimeSlot;
+  tuesday: TimeSlot;
+  wednesday: TimeSlot;
+  thursday: TimeSlot;
+  friday: TimeSlot;
+  saturday: TimeSlot;
+  sunday: TimeSlot;
+}
+
+export interface AvailabilitySettings {
+  firm_id: string;
+  timezone: string;
+  weekly_schedule: WeeklySchedule;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AvailabilityUpdateRequest {
+  timezone: string;
+  weekly_schedule: WeeklySchedule;
+}
+
+export interface BlockedDate {
+  id: string;
+  firm_id: string;
+  start_date: string;
+  end_date: string;
+  reason?: string;
+  created_at: string;
+}
+
+export interface BlockedDateCreateRequest {
+  start_date: string;
+  end_date: string;
+  reason?: string;
+}
+
+export interface BlockedDatesResponse {
+  blocked_dates: BlockedDate[];
+  total: number;
+}
+
+export interface TimezoneOption {
+  value: string;
+  label: string;
+  offset: string;
+}
+
+export interface TimezonesResponse {
+  timezones: TimezoneOption[];
+}
+
+export interface ConflictWarning {
+  appointment_id: string;
+  title: string;
+  client_name: string;
+  date: string;
+  time: string;
+  attendees?: string;
+}
+
+export interface ConflictResponse {
+  conflicts: ConflictWarning[];
   message: string;
 }

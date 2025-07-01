@@ -282,24 +282,27 @@ def get_calendar_connection_status(firm_id: str) -> Dict[str, Any]:
 
 
 def get_calendar_availability(firm_id: str, days: int = 14) -> List[Dict[str, Any]]:
-    """Get available time slots for a firm's calendar."""
+    """Get available time slots for a firm's calendar, respecting availability settings and blocked dates."""
     try:
         connection = get_calendar_connection(firm_id)
         if not connection or not connection.calendar_id:
             raise Exception("No calendar connection found for this firm")
+        
+        # Get firm availability settings
+        from app.modules.availability.services import get_firm_availability, get_blocked_dates
+        availability = get_firm_availability(firm_id)
+        blocked_dates = get_blocked_dates(firm_id)
         
         credentials = get_credentials_from_tokens(connection.access_token, connection.refresh_token)
         credentials = refresh_access_token(credentials)
         
         service = build('calendar', 'v3', credentials=credentials)
         
-        # Get current time and end time (14 days from now)
-        import pytz
-        
+        # Get current time and end time
         now = datetime.utcnow()
         end_time = now + timedelta(days=days)
         
-        # Get free/busy information
+        # Get free/busy information from Google Calendar
         freebusy_query = {
             'timeMin': now.isoformat() + 'Z',
             'timeMax': end_time.isoformat() + 'Z',
@@ -309,27 +312,71 @@ def get_calendar_availability(firm_id: str, days: int = 14) -> List[Dict[str, An
         freebusy_result = service.freebusy().query(body=freebusy_query).execute()
         busy_times = freebusy_result['calendars'][connection.calendar_id].get('busy', [])
         
-        # Generate available slots (9 AM to 5 PM, weekdays only)
+        # Generate available slots based on firm availability settings
         available_slots = []
         current_date = now.date()
         
         for day_offset in range(days):
             check_date = current_date + timedelta(days=day_offset)
+            weekday_name = check_date.strftime("%A").lower()
             
-            # Skip weekends
-            if check_date.weekday() >= 5:  # Saturday = 5, Sunday = 6
+            # Check if date is blocked
+            date_is_blocked = False
+            for blocked_date in blocked_dates:
+                # Convert string dates to date objects for comparison
+                try:
+                    from datetime import date
+                    start_date = date.fromisoformat(blocked_date.start_date) if isinstance(blocked_date.start_date, str) else blocked_date.start_date
+                    end_date = date.fromisoformat(blocked_date.end_date) if isinstance(blocked_date.end_date, str) else blocked_date.end_date
+                    
+                    if start_date <= check_date <= end_date:
+                        date_is_blocked = True
+                        break
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Invalid date format in blocked date {blocked_date.id}: {e}")
+                    continue
+            
+            if date_is_blocked:
                 continue
             
-            # Generate hourly slots from 9 AM to 5 PM
-            for hour in range(9, 17):  # 9 AM to 4 PM (last slot starts at 4 PM)
-                slot_start = datetime.combine(check_date, datetime.min.time().replace(hour=hour))
+            # Get availability settings for this day
+            if availability and availability.weekly_schedule:
+                day_schedule = getattr(availability.weekly_schedule, weekday_name, None)
+                if not day_schedule or not day_schedule.enabled:
+                    continue
+                
+                # Parse business hours
+                try:
+                    start_hour, start_min = map(int, day_schedule.start_time.split(':'))
+                    end_hour, end_min = map(int, day_schedule.end_time.split(':'))
+                except (ValueError, AttributeError):
+                    # Fallback to default business hours if parsing fails
+                    start_hour, start_min = 9, 0
+                    end_hour, end_min = 17, 0
+            else:
+                # Fallback to default business hours (9 AM to 5 PM, weekdays only)
+                if check_date.weekday() >= 5:  # Skip weekends
+                    continue
+                start_hour, start_min = 9, 0
+                end_hour, end_min = 17, 0
+            
+            # Generate hourly slots within business hours
+            current_hour = start_hour
+            while current_hour < end_hour:
+                slot_start = datetime.combine(check_date, datetime.min.time().replace(hour=current_hour, minute=start_min if current_hour == start_hour else 0))
                 slot_end = slot_start + timedelta(hours=1)
+                
+                # Don't go past business hours
+                business_end = datetime.combine(check_date, datetime.min.time().replace(hour=end_hour, minute=end_min))
+                if slot_end > business_end:
+                    break
                 
                 # Skip past times
                 if slot_start <= now:
+                    current_hour += 1
                     continue
                 
-                # Check if slot conflicts with busy times
+                # Check if slot conflicts with Google Calendar busy times
                 slot_is_free = True
                 for busy_period in busy_times:
                     busy_start = datetime.fromisoformat(busy_period['start'].replace('Z', '+00:00')).replace(tzinfo=None)
@@ -345,6 +392,8 @@ def get_calendar_availability(firm_id: str, days: int = 14) -> List[Dict[str, An
                         'end_time': slot_end,
                         'formatted_time': slot_start.strftime('%A, %B %d at %I:%M %p')
                     })
+                
+                current_hour += 1
         
         return available_slots
         
