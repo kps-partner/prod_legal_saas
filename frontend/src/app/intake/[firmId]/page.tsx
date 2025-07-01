@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { apiClient, PublicIntakePageData, IntakeFormSubmissionData, AvailabilityResponse, AvailableTimeSlot, BookingRequest, getClientTimezone } from '@/lib/api';
 import { Loader2, CheckCircle, AlertCircle, Calendar, Clock } from 'lucide-react';
+import { BookingCalendar } from '@/components/booking/BookingCalendar';
+import { ConfirmationDialog } from '@/components/booking/ConfirmationDialog';
 
 export default function PublicIntakeForm() {
   const params = useParams();
@@ -27,10 +29,11 @@ export default function PublicIntakeForm() {
   const [showBooking, setShowBooking] = useState(false);
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<AvailableTimeSlot | null>(null);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const [bookingComplete, setBookingComplete] = useState(false);
   const [meetingLink, setMeetingLink] = useState<string | null>(null);
+  const [confirmedSlot, setConfirmedSlot] = useState<AvailableTimeSlot | null>(null);
+  const [selectedSlotForConfirmation, setSelectedSlotForConfirmation] = useState<AvailableTimeSlot | null>(null);
 
   const [formData, setFormData] = useState<IntakeFormSubmissionData>({
     client_name: '',
@@ -116,12 +119,12 @@ export default function PublicIntakeForm() {
   };
 
   const handleSlotSelection = (slot: AvailableTimeSlot) => {
-    setSelectedSlot(slot);
+    setSelectedSlotForConfirmation(slot);
   };
 
-  const handleBookingSubmit = async () => {
-    if (!selectedSlot || !caseId) {
-      setError('Please select a time slot');
+  const handleConfirmBooking = async () => {
+    if (!caseId || !selectedSlotForConfirmation) {
+      setError('An error occurred. Please try again.');
       return;
     }
 
@@ -130,7 +133,7 @@ export default function PublicIntakeForm() {
       setError(null);
 
       const bookingRequest: BookingRequest = {
-        start_time: selectedSlot.start_time,
+        start_time: selectedSlotForConfirmation.start_time,
         client_name: formData.client_name,
         client_email: formData.client_email,
         client_timezone: formData.client_timezone,
@@ -138,9 +141,11 @@ export default function PublicIntakeForm() {
 
       const response = await apiClient.createPublicBooking(caseId, bookingRequest);
       console.log('Booking created successfully:', response);
-      
+
+      setConfirmedSlot(selectedSlotForConfirmation);
       setMeetingLink(response.meeting_link || null);
       setBookingComplete(true);
+      setSelectedSlotForConfirmation(null);
     } catch (err) {
       console.error('Booking creation error:', err);
       if (err instanceof Error) {
@@ -151,6 +156,10 @@ export default function PublicIntakeForm() {
     } finally {
       setBookingSubmitting(false);
     }
+  };
+
+  const handleCancelConfirmation = () => {
+    setSelectedSlotForConfirmation(null);
   };
 
   if (loading) {
@@ -200,13 +209,13 @@ export default function PublicIntakeForm() {
               <p className="text-gray-600 mb-4">
                 Your intake form has been submitted and your appointment has been scheduled successfully.
               </p>
-              {selectedSlot && (
+              {confirmedSlot && (
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-4">
                   <div className="flex items-center space-x-2 mb-2">
                     <Calendar className="h-4 w-4 text-blue-600" />
                     <span className="font-medium text-blue-900">Appointment Details</span>
                   </div>
-                  <p className="text-blue-800 text-sm">{selectedSlot.formatted_time}</p>
+                  <p className="text-blue-800 text-sm">{confirmedSlot.formatted_time}</p>
                   {meetingLink && (
                     <div className="mt-2">
                       <a
@@ -265,47 +274,21 @@ export default function PublicIntakeForm() {
                   </div>
                 </div>
               ) : availability && availability.available_slots.length > 0 ? (
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">
-                      Select an available time slot:
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {availability.available_slots.map((slot, index) => (
-                        <Button
-                          key={index}
-                          variant={selectedSlot === slot ? "default" : "outline"}
-                          className="h-auto p-4 text-left justify-start"
-                          onClick={() => handleSlotSelection(slot)}
-                        >
-                          <div className="flex items-center space-x-2">
-                            <Clock className="h-4 w-4" />
-                            <span>{slot.formatted_time}</span>
-                          </div>
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {selectedSlot && (
-                    <div className="pt-4 border-t">
-                      <Button
-                        onClick={handleBookingSubmit}
-                        className="w-full"
-                        disabled={bookingSubmitting}
-                      >
-                        {bookingSubmitting ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Scheduling Appointment...
-                          </>
-                        ) : (
-                          'Confirm Appointment'
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                <>
+                  <BookingCalendar
+                    availability={availability.available_slots}
+                    onSlotSelect={handleSlotSelection}
+                    firmName={pageData?.firm_name || ''}
+                    isBooking={bookingSubmitting}
+                  />
+                  <ConfirmationDialog
+                    isOpen={!!selectedSlotForConfirmation}
+                    onClose={handleCancelConfirmation}
+                    onConfirm={handleConfirmBooking}
+                    slot={selectedSlotForConfirmation}
+                    isBooking={bookingSubmitting}
+                  />
+                </>
               ) : (
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
