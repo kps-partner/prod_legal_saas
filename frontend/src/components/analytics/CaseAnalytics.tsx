@@ -67,18 +67,14 @@ export function CaseAnalytics() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Header with Time Selector */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Case Management Analytics</h2>
-            <p className="text-gray-600 mt-1">Track your firm's performance and conversion metrics</p>
-          </div>
+        <div className="flex justify-end">
           <TimeSelector value={timePeriod} onChange={setTimePeriod} />
         </div>
 
-        {/* KPI Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* KPI Cards Grid - Two rows layout */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KPICard
           title="New Leads"
           value={kpis.newLeads.value}

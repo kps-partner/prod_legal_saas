@@ -21,7 +21,7 @@ export function SignedClientsChart({ data }: SignedClientsChartProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80 w-full">
+        <div className="h-48 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={data}

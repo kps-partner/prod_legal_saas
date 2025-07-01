@@ -23,23 +23,23 @@ export function KPICard({ title, value, description, trend = 0, icon, color, too
   return (
     <Tooltip>
       <Card className="hover:shadow-lg transition-all duration-200 hover:scale-105">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+          <div className="flex items-center gap-1">
+            <CardTitle className="text-xs font-medium text-gray-600 uppercase tracking-wide">
               {title}
             </CardTitle>
             <TooltipTrigger asChild>
               <button className="focus:outline-none">
-                <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help transition-colors" />
+                <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600 cursor-help transition-colors" />
               </button>
             </TooltipTrigger>
           </div>
-          <div className={cn("p-2 rounded-lg", color)}>
-            {icon}
+          <div className={cn("p-1.5 rounded-lg", color)}>
+            {React.cloneElement(icon as React.ReactElement, { className: "h-4 w-4 text-white" })}
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-gray-900 mb-2">
+        <CardContent className="pt-1">
+          <div className="text-lg font-bold text-gray-900 mb-1">
             {value}
           </div>
           {showTrend && (
@@ -51,7 +51,7 @@ export function KPICard({ title, value, description, trend = 0, icon, color, too
               <span className="text-gray-500 ml-1">vs last period</span>
             </div>
           )}
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-500 mt-1 line-clamp-2">
             {description}
           </p>
         </CardContent>
