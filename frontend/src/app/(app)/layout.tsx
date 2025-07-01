@@ -3,8 +3,9 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { AppLayout } from '@/components/layout/AppLayout';
 
-export default function AppLayout({
+export default function Layout({
   children,
 }: {
   children: React.ReactNode;
@@ -32,5 +33,9 @@ export default function AppLayout({
     return null; // Will redirect to login
   }
 
-  return <>{children}</>;
+  return (
+    <AppLayout>
+      {children}
+    </AppLayout>
+  );
 }

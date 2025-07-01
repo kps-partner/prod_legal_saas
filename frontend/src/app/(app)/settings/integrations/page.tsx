@@ -123,21 +123,10 @@ export default function IntegrationsPage() {
   }
 
   return (
-    <div className="container mx-auto py-4">
-      <div className="mb-4">
-        <div className="flex items-center space-x-4 mb-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push('/dashboard')}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Dashboard</span>
-          </Button>
-        </div>
-        <h1 className="text-2xl font-bold">Integrations</h1>
-        <p className="text-muted-foreground text-sm">
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Schedule</h1>
+        <p className="text-gray-600">
           Connect and manage your external service integrations
         </p>
       </div>

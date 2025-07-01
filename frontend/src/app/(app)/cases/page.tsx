@@ -145,19 +145,11 @@ export default function CasesPage() {
 
   if (cases.length === 0) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Dashboard
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Case Management</h1>
-              <p className="text-gray-600 mt-1">Manage your cases with a visual Kanban board</p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Case Management</h1>
+            <p className="text-gray-600 mt-1">Manage your cases with a visual Kanban board</p>
           </div>
           <div className="flex items-center space-x-2">
             <Switch
@@ -204,21 +196,13 @@ export default function CasesPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard">
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Case Management</h1>
-            <p className="text-gray-600 mt-1">
-              {showArchived ? 'Archived cases' : `${cases.length} active cases`}
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Case Management</h1>
+          <p className="text-gray-600 mt-1">
+            {showArchived ? 'Archived cases' : `${cases.length} active cases`}
+          </p>
         </div>
         <div className="flex items-center space-x-2">
           <Switch

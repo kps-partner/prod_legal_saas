@@ -196,13 +196,7 @@ export default function IntakePageSettingsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-8">
-        <div className="flex items-center space-x-4 mb-6">
-          <Button variant="ghost" onClick={() => router.push('/dashboard')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
-        </div>
+      <div className="p-6">
         <div className="flex items-center justify-center h-64">
           <div className="text-lg">Loading intake page settings...</div>
         </div>
@@ -212,14 +206,11 @@ export default function IntakePageSettingsPage() {
 
   return (
     <RoleGuard allowedRoles={['Admin']}>
-      <div className="container mx-auto py-8">
+      <div className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" onClick={() => router.push('/dashboard')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
+          <div>
             <h1 className="text-3xl font-bold">Intake Page Settings</h1>
+            <p className="text-gray-600 mt-1">Configure your public intake form and case types</p>
           </div>
           <Button onClick={handleSave} disabled={submitting}>
             <Save className="h-4 w-4 mr-2" />
