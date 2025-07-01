@@ -188,33 +188,33 @@ export function AvailabilityTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="py-2">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="text-sm">{error}</AlertDescription>
         </Alert>
       )}
 
       {success && (
-        <Alert>
+        <Alert className="py-2">
           <CheckCircle className="h-4 w-4" />
-          <AlertDescription>{success}</AlertDescription>
+          <AlertDescription className="text-sm">{success}</AlertDescription>
         </Alert>
       )}
 
       {/* Timezone Selection */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Clock className="h-5 w-5" />
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center space-x-2 text-lg">
+            <Clock className="h-4 w-4" />
             <span>Timezone</span>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm">
             Select your firm's timezone for scheduling appointments
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <Select value={availability.timezone} onValueChange={handleTimezoneChange}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select timezone" />
@@ -223,8 +223,8 @@ export function AvailabilityTab() {
               {timezones.map((tz) => (
                 <SelectItem key={tz.value} value={tz.value}>
                   <div className="flex items-center justify-between w-full">
-                    <span>{tz.label}</span>
-                    <span className="text-sm text-muted-foreground ml-2">{tz.offset}</span>
+                    <span className="text-sm">{tz.label}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{tz.offset}</span>
                   </div>
                 </SelectItem>
               ))}
@@ -235,36 +235,36 @@ export function AvailabilityTab() {
 
       {/* Weekly Schedule */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Weekly Schedule</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg">Weekly Schedule</CardTitle>
+              <CardDescription className="text-sm">
                 Set your available hours for each day of the week
               </CardDescription>
             </div>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm" onClick={handleSetBusinessHours}>
-                Set Business Hours
+            <div className="flex space-x-1">
+              <Button variant="outline" size="sm" onClick={handleSetBusinessHours} className="text-xs px-2">
+                Business Hours
               </Button>
-              <Button variant="outline" size="sm" onClick={handleClearAll}>
+              <Button variant="outline" size="sm" onClick={handleClearAll} className="text-xs px-2">
                 Clear All
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="pt-0">
+          <div className="space-y-2">
             {DAYS_OF_WEEK.map((day) => {
               const daySchedule = availability.weekly_schedule[day.key as keyof WeeklySchedule];
               return (
-                <div key={day.key} className="flex items-center space-x-4 p-4 border rounded-lg">
-                  <div className="flex items-center space-x-2 w-24">
+                <div key={day.key} className="flex items-center space-x-3 p-3 border rounded-lg">
+                  <div className="flex items-center space-x-2 w-20">
                     <Switch
                       checked={daySchedule.enabled}
                       onCheckedChange={(enabled) => handleDayToggle(day.key, enabled)}
                     />
-                    <Label className="font-medium">{day.label}</Label>
+                    <Label className="font-medium text-sm">{day.label.slice(0, 3)}</Label>
                   </div>
                   
                   {daySchedule.enabled ? (
@@ -277,7 +277,7 @@ export function AvailabilityTab() {
                       />
                     </div>
                   ) : (
-                    <div className="flex-1 text-sm text-muted-foreground">
+                    <div className="flex-1 text-xs text-muted-foreground">
                       Not available
                     </div>
                   )}
@@ -290,7 +290,7 @@ export function AvailabilityTab() {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving}>
+        <Button onClick={handleSave} disabled={saving} size="sm">
           {saving ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>

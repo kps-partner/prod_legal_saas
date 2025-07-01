@@ -1,5 +1,15 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+// Utility function to detect client timezone
+export const getClientTimezone = (): string => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch (error) {
+    console.warn('Failed to detect client timezone, falling back to UTC');
+    return 'UTC';
+  }
+};
+
 export interface RegisterRequest {
   firm_name: string;
   user_name: string;
@@ -690,6 +700,7 @@ export interface IntakeFormSubmissionData {
   client_phone?: string;
   case_type_id: string;
   description: string;
+  client_timezone?: string;
 }
 
 export interface IntakeFormSubmissionResponse {
@@ -715,6 +726,7 @@ export interface BookingRequest {
   start_time: string;
   client_name: string;
   client_email: string;
+  client_timezone?: string;
 }
 
 export interface BookingResponse {

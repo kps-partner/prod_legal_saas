@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { apiClient, PublicIntakePageData, IntakeFormSubmissionData, AvailabilityResponse, AvailableTimeSlot, BookingRequest } from '@/lib/api';
+import { apiClient, PublicIntakePageData, IntakeFormSubmissionData, AvailabilityResponse, AvailableTimeSlot, BookingRequest, getClientTimezone } from '@/lib/api';
 import { Loader2, CheckCircle, AlertCircle, Calendar, Clock } from 'lucide-react';
 
 export default function PublicIntakeForm() {
@@ -38,6 +38,7 @@ export default function PublicIntakeForm() {
     client_phone: '',
     case_type_id: '',
     description: '',
+    client_timezone: getClientTimezone(), // Auto-detect client timezone
   });
 
   useEffect(() => {
@@ -132,6 +133,7 @@ export default function PublicIntakeForm() {
         start_time: selectedSlot.start_time,
         client_name: formData.client_name,
         client_email: formData.client_email,
+        client_timezone: formData.client_timezone,
       };
 
       const response = await apiClient.createPublicBooking(caseId, bookingRequest);

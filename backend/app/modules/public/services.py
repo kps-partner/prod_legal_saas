@@ -125,6 +125,7 @@ async def submit_intake_form(firm_id: str, submission: IntakeFormSubmission) -> 
             "case_type_id": submission.case_type_id,
             "status": CaseStatus.NEW_LEAD.value,
             "firm_id": firm_id,
+            "client_timezone": submission.client_timezone,  # Store client timezone
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         }
@@ -254,7 +255,7 @@ def get_firm_availability(firm_id: str) -> Dict:
         )
 
 
-def create_appointment_booking(case_id: str, start_time: datetime, client_name: str, client_email: str) -> Dict:
+def create_appointment_booking(case_id: str, start_time: datetime, client_name: str, client_email: str, client_timezone: str = None) -> Dict:
     """Create an appointment booking for a case."""
     try:
         # Validate ObjectId format first
@@ -279,12 +280,17 @@ def create_appointment_booking(case_id: str, start_time: datetime, client_name: 
         # Create the calendar appointment using the scheduling service
         from app.modules.scheduling.services import create_calendar_appointment
         
+        # Get client timezone from case if not provided
+        if not client_timezone and case.get("client_timezone"):
+            client_timezone = case["client_timezone"]
+        
         appointment_details = create_calendar_appointment(
             firm_id=firm_id,
             case_id=case_id,
             start_time=start_time,
             client_name=client_name,
-            client_email=client_email
+            client_email=client_email,
+            client_timezone=client_timezone
         )
         
         logger.info(f"Successfully created appointment {appointment_details['appointment_id']} for case {case_id}")

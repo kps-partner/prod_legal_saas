@@ -201,39 +201,39 @@ export function BlockedDatesTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="py-2">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="text-sm">{error}</AlertDescription>
         </Alert>
       )}
 
       {success && (
-        <Alert>
+        <Alert className="py-2">
           <CheckCircle className="h-4 w-4" />
-          <AlertDescription>{success}</AlertDescription>
+          <AlertDescription className="text-sm">{success}</AlertDescription>
         </Alert>
       )}
 
       {/* Add New Blocked Date */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center space-x-2">
-                <Calendar className="h-5 w-5" />
+              <CardTitle className="flex items-center space-x-2 text-lg">
+                <Calendar className="h-4 w-4" />
                 <span>Block-Out Dates</span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm">
                 Block specific dates to prevent client bookings
               </CardDescription>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Block-Out Date
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Date
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -343,37 +343,37 @@ export function BlockedDatesTab() {
 
       {/* Existing Blocked Dates */}
       <Card>
-        <CardHeader>
-          <CardTitle>Current Block-Out Dates</CardTitle>
-          <CardDescription>
-            {blockedDates.length === 0 
-              ? 'No blocked dates configured' 
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Current Block-Out Dates</CardTitle>
+          <CardDescription className="text-sm">
+            {blockedDates.length === 0
+              ? 'No blocked dates configured'
               : `${blockedDates.length} blocked date${blockedDates.length === 1 ? '' : 's'} configured`
             }
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {blockedDates.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No block-out dates configured</p>
-              <p className="text-sm">Add block-out dates to prevent client bookings during unavailable periods.</p>
+            <div className="text-center py-6 text-muted-foreground">
+              <Calendar className="h-8 w-8 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">No block-out dates configured</p>
+              <p className="text-xs">Add block-out dates to prevent client bookings during unavailable periods.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {blockedDates.map((blockedDate) => (
-                <div key={blockedDate.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="font-medium">
+                <div key={blockedDate.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm">
                       {formatDateRange(blockedDate.start_date, blockedDate.end_date)}
                     </div>
                     {blockedDate.reason && (
-                      <div className="text-sm text-muted-foreground mt-1">
+                      <div className="text-xs text-muted-foreground mt-1 truncate">
                         {blockedDate.reason}
                       </div>
                     )}
-                    <div className="flex items-center space-x-2 mt-2">
-                      <Badge variant="secondary" className="text-xs">
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Badge variant="secondary" className="text-xs px-1 py-0">
                         Created {new Date(blockedDate.created_at).toLocaleDateString()}
                       </Badge>
                     </div>
@@ -382,9 +382,9 @@ export function BlockedDatesTab() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleDelete(blockedDate.id)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-600 hover:text-red-700 ml-2 flex-shrink-0"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               ))}

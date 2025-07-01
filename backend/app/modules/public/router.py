@@ -49,5 +49,6 @@ def create_booking_endpoint(case_id: str, booking: BookingRequest):
         case_id=case_id,
         start_time=booking.start_time,
         client_name=booking.client_name,
-        client_email=booking.client_email
+        client_email=booking.client_email,
+        client_timezone=booking.client_timezone
     )

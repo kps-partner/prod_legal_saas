@@ -123,9 +123,9 @@ export default function IntegrationsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="mb-8">
-        <div className="flex items-center space-x-4 mb-4">
+    <div className="container mx-auto py-4">
+      <div className="mb-4">
+        <div className="flex items-center space-x-4 mb-2">
           <Button
             variant="outline"
             size="sm"
@@ -136,8 +136,8 @@ export default function IntegrationsPage() {
             <span>Back to Dashboard</span>
           </Button>
         </div>
-        <h1 className="text-3xl font-bold">Integrations</h1>
-        <p className="text-muted-foreground mt-2">
+        <h1 className="text-2xl font-bold">Integrations</h1>
+        <p className="text-muted-foreground text-sm">
           Connect and manage your external service integrations
         </p>
       </div>
@@ -156,30 +156,30 @@ export default function IntegrationsPage() {
         </Alert>
       )}
 
-      <div className="space-y-8">
-        {/* Google Calendar Integration Section */}
-        <Card>
-          <CardHeader>
+      <div className="space-y-4">
+        {/* Google Calendar Integration Section - Full Width */}
+        <Card className="h-fit">
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Calendar className="h-6 w-6 text-blue-600" />
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 bg-blue-100 rounded-md">
+                  <Calendar className="h-4 w-4 text-blue-600" />
                 </div>
                 <div>
-                  <CardTitle>Google Calendar Setup</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-lg">Google Calendar Setup</CardTitle>
+                  <CardDescription className="text-xs">
                     Connect your Google Calendar to enable appointment scheduling
                   </CardDescription>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
                 {status?.connected ? (
-                  <Badge variant="default" className="bg-green-100 text-green-800">
+                  <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Connected
                   </Badge>
                 ) : (
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="text-xs">
                     <AlertCircle className="h-3 w-3 mr-1" />
                     Not Connected
                   </Badge>
@@ -187,117 +187,118 @@ export default function IntegrationsPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {!status?.connected ? (
-              <div className="space-y-4">
-                <div className="text-sm text-muted-foreground">
-                  <p className="mb-2">To enable appointment scheduling, you need to:</p>
-                  <ul className="list-disc list-inside space-y-1 ml-4">
+              <div className="space-y-3">
+                <div className="text-xs text-muted-foreground">
+                  <p className="mb-1">To enable appointment scheduling:</p>
+                  <ul className="list-disc list-inside space-y-0.5 ml-2 text-xs">
                     <li>Connect your Google account</li>
                     <li>Grant calendar access permissions</li>
                     <li>Select which calendar to use for appointments</li>
                   </ul>
                 </div>
-                <Button onClick={handleConnect} disabled={connecting}>
+                <Button onClick={handleConnect} disabled={connecting} size="sm">
                   {connecting ? (
                     'Connecting...'
                   ) : (
                     <>
-                      <ExternalLink className="h-4 w-4 mr-2" />
+                      <ExternalLink className="h-3 w-3 mr-1" />
                       Connect Google Calendar
                     </>
                   )}
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <div>
-                      <div className="font-medium text-green-900">
-                        {status.calendar_name || 'Google Calendar Connected'}
-                      </div>
-                      <div className="text-sm text-green-700">
-                        Connected on {status.connected_at ? formatDate(status.connected_at) : 'Unknown'}
-                      </div>
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-md border border-green-200">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <div>
+                    <div className="font-medium text-green-900 text-sm">
+                      {status.calendar_name || 'Google Calendar Connected'}
+                    </div>
+                    <div className="text-xs text-green-700">
+                      Connected on {status.connected_at ? formatDate(status.connected_at) : 'Unknown'}
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Manage
-                  </Button>
+                </div>
+                <Button variant="outline" size="sm" className="text-xs">
+                  <Settings className="h-3 w-3 mr-1" />
+                  Manage
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Two Column Layout for Availability and Block-Out Dates */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Availability Section */}
+          <Card className="h-fit">
+            <CardHeader className="pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 bg-green-100 rounded-md">
+                  <Clock className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Availability Settings</CardTitle>
+                  <CardDescription className="text-xs">
+                    Configure your business hours and availability
+                  </CardDescription>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {!status?.connected ? (
+                <div className="text-center py-4">
+                  <Calendar className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <h3 className="text-sm font-medium mb-1">Connect Google Calendar First</h3>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    You need to connect your Google Calendar before setting up availability.
+                  </p>
+                  <Button size="sm" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                    Go to Calendar Setup
+                  </Button>
+                </div>
+              ) : (
+                <AvailabilityTab />
+              )}
+            </CardContent>
+          </Card>
 
-        {/* Availability Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Clock className="h-6 w-6 text-green-600" />
+          {/* Block-Out Dates Section */}
+          <Card className="h-fit">
+            <CardHeader className="pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 bg-red-100 rounded-md">
+                  <CalendarX className="h-4 w-4 text-red-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Block-Out Dates</CardTitle>
+                  <CardDescription className="text-xs">
+                    Block specific dates to prevent client bookings
+                  </CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle>Availability Settings</CardTitle>
-                <CardDescription>
-                  Configure your business hours and availability for client bookings
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {!status?.connected ? (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">Connect Google Calendar First</h3>
-                <p className="text-muted-foreground mb-4">
-                  You need to connect your Google Calendar before setting up availability.
-                </p>
-                <Button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                  Go to Calendar Setup
-                </Button>
-              </div>
-            ) : (
-              <AvailabilityTab />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Block-Out Dates Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <CalendarX className="h-6 w-6 text-red-600" />
-              </div>
-              <div>
-                <CardTitle>Block-Out Dates</CardTitle>
-                <CardDescription>
-                  Block specific dates to prevent client bookings during unavailable periods
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {!status?.connected ? (
-              <div className="text-center py-8">
-                <CalendarX className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">Connect Google Calendar First</h3>
-                <p className="text-muted-foreground mb-4">
-                  You need to connect your Google Calendar before managing block-out dates.
-                </p>
-                <Button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                  Go to Calendar Setup
-                </Button>
-              </div>
-            ) : (
-              <BlockedDatesTab />
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {!status?.connected ? (
+                <div className="text-center py-4">
+                  <CalendarX className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <h3 className="text-sm font-medium mb-1">Connect Google Calendar First</h3>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    You need to connect your Google Calendar before managing block-out dates.
+                  </p>
+                  <Button size="sm" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                    Go to Calendar Setup
+                  </Button>
+                </div>
+              ) : (
+                <BlockedDatesTab />
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

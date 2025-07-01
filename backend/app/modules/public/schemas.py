@@ -12,6 +12,7 @@ class IntakeFormSubmission(BaseModel):
     client_phone: Optional[str] = Field(None, max_length=20, description="Phone number of the prospective client")
     case_type_id: str = Field(..., description="ID of the selected case type")
     description: str = Field(..., min_length=10, max_length=2000, description="Description of the legal matter")
+    client_timezone: Optional[str] = Field(None, description="Client's timezone (e.g., 'America/New_York')")
 
 
 class IntakeFormSubmissionResponse(BaseModel):
@@ -57,6 +58,7 @@ class BookingRequest(BaseModel):
     start_time: datetime = Field(..., description="Selected start time for the appointment")
     client_name: str = Field(..., description="Client name for the meeting")
     client_email: str = Field(..., description="Client email for the meeting")
+    client_timezone: Optional[str] = Field(None, description="Client's timezone for the appointment")
 
 
 class BookingResponse(BaseModel):

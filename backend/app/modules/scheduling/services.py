@@ -284,6 +284,7 @@ def get_calendar_connection_status(firm_id: str) -> Dict[str, Any]:
 def get_calendar_availability(firm_id: str, days: int = 14) -> List[Dict[str, Any]]:
     """Get available time slots for a firm's calendar, respecting availability settings and blocked dates."""
     try:
+        logger.info(f"TIMEZONE DEBUG: Getting calendar availability for firm {firm_id}")
         connection = get_calendar_connection(firm_id)
         if not connection or not connection.calendar_id:
             raise Exception("No calendar connection found for this firm")
@@ -387,6 +388,8 @@ def get_calendar_availability(firm_id: str, days: int = 14) -> List[Dict[str, An
                         break
                 
                 if slot_is_free:
+                    logger.info(f"TIMEZONE DEBUG: Adding available slot - start_time: {slot_start} (type: {type(slot_start)})")
+                    logger.info(f"TIMEZONE DEBUG: Slot timezone info: {slot_start.tzinfo}")
                     available_slots.append({
                         'start_time': slot_start,
                         'end_time': slot_end,
@@ -402,10 +405,24 @@ def get_calendar_availability(firm_id: str, days: int = 14) -> List[Dict[str, An
         raise Exception(f"Failed to get calendar availability: {str(e)}")
 
 
-def create_calendar_appointment(firm_id: str, case_id: str, start_time: datetime, client_name: str, client_email: str) -> Dict[str, Any]:
+def create_calendar_appointment(firm_id: str, case_id: str, start_time: datetime, client_name: str, client_email: str, client_timezone: str = None) -> Dict[str, Any]:
     """Create a calendar appointment and return appointment details."""
     try:
-        logger.info(f"Creating calendar appointment for firm {firm_id}, case {case_id}")
+        logger.info(f"TIMEZONE DEBUG: Creating calendar appointment for firm {firm_id}, case {case_id}")
+        logger.info(f"TIMEZONE DEBUG: Received start_time: {start_time} (type: {type(start_time)})")
+        logger.info(f"TIMEZONE DEBUG: start_time timezone info: {start_time.tzinfo}")
+        logger.info(f"TIMEZONE DEBUG: Client timezone: {client_timezone}")
+        
+        # Get firm availability settings to determine firm timezone
+        from app.modules.availability.services import get_firm_availability
+        availability = get_firm_availability(firm_id)
+        firm_timezone = availability.timezone if availability else "America/Los_Angeles"
+        logger.info(f"TIMEZONE DEBUG: Firm timezone: {firm_timezone}")
+        
+        # Determine which timezone to use for the calendar event
+        # Priority: client_timezone > firm_timezone > UTC
+        event_timezone = client_timezone or firm_timezone
+        logger.info(f"TIMEZONE DEBUG: Using event timezone: {event_timezone}")
         
         connection = get_calendar_connection(firm_id)
         if not connection or not connection.calendar_id:
@@ -423,17 +440,34 @@ def create_calendar_appointment(firm_id: str, case_id: str, start_time: datetime
         # Calculate end time (1 hour appointment)
         end_time = start_time + timedelta(hours=1)
         
-        # Create the event
+        # Create the event with proper timezone handling
+        logger.info(f"TIMEZONE DEBUG: Creating event with start_time: {start_time.isoformat()}")
+        logger.info(f"TIMEZONE DEBUG: Creating event with end_time: {end_time.isoformat()}")
+        
+        # Format datetime for Google Calendar API
+        # If we have timezone info, use it; otherwise treat as naive datetime in the event timezone
+        if start_time.tzinfo is not None:
+            start_datetime_str = start_time.isoformat()
+            end_datetime_str = end_time.isoformat()
+        else:
+            # Naive datetime - assume it's in the event timezone
+            start_datetime_str = start_time.isoformat()
+            end_datetime_str = end_time.isoformat()
+        
+        logger.info(f"TIMEZONE DEBUG: Final start_datetime_str: {start_datetime_str}")
+        logger.info(f"TIMEZONE DEBUG: Final end_datetime_str: {end_datetime_str}")
+        logger.info(f"TIMEZONE DEBUG: Final event_timezone: {event_timezone}")
+        
         event = {
             'summary': f'Legal Consultation - {client_name}',
             'description': f'Legal consultation with {client_name} ({client_email})\nCase ID: {case_id}',
             'start': {
-                'dateTime': start_time.isoformat() + 'Z',
-                'timeZone': 'UTC',
+                'dateTime': start_datetime_str,
+                'timeZone': event_timezone,
             },
             'end': {
-                'dateTime': end_time.isoformat() + 'Z',
-                'timeZone': 'UTC',
+                'dateTime': end_datetime_str,
+                'timeZone': event_timezone,
             },
             'attendees': [
                 {'email': client_email, 'displayName': client_name}
