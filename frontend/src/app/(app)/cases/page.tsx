@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { KanbanBoard } from '@/components/KanbanBoard';
+import { CaseAnalytics } from '@/components/analytics/CaseAnalytics';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -229,7 +230,13 @@ export default function CasesPage() {
         </div>
       </div>
 
-      <KanbanBoard 
+      {/* Analytics Section */}
+      <div className="mb-8">
+        <CaseAnalytics />
+      </div>
+
+      {/* Kanban Board */}
+      <KanbanBoard
         cases={cases}
         onStatusChange={updateCaseStatus}
         showArchived={showArchived}
