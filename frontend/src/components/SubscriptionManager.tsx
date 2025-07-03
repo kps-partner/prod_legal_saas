@@ -75,7 +75,7 @@ export default function SubscriptionManager({ token }: SubscriptionManagerProps)
         <div className="space-y-2">
           <h3 className="font-semibold">Professional Plan</h3>
           <p className="text-sm text-gray-600">
-            Full access to all LawFirm OS features
+            Full access to all IntakeIntel features
           </p>
           <p className="text-lg font-bold">$99/month</p>
         </div>

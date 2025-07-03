@@ -40,7 +40,7 @@ export default function Home() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Building2 className="h-8 w-8 text-blue-600 mr-3" />
-              <h1 className="text-xl font-bold text-gray-900">LawFirm OS</h1>
+              <h1 className="text-xl font-bold text-gray-900">IntakeIntel</h1>
             </div>
             <div className="flex items-center space-x-4">
               <Link href="/login">
@@ -58,11 +58,11 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Streamline Your Law Firm with AI-Powered Management
+            Intelligent Client Intake & Case Management
           </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Complete SaaS solution for law firms featuring client intake, scheduling,
-            case triage, and intelligent automation to help you focus on what matters most.
+            AI-powered client intake platform that streamlines case management, automates scheduling,
+            and provides intelligent insights to help law firms grow their practice efficiently.
           </p>
           <div className="flex justify-center space-x-4">
             <Link href="/register">
@@ -132,7 +132,7 @@ export default function Home() {
         {/* Benefits Section */}
         <div className="text-center mb-12">
           <h3 className="text-3xl font-bold text-gray-900 mb-4">
-            Why Law Firms Choose LawFirm OS
+            Why Law Firms Choose IntakeIntel
           </h3>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Proven results that transform your practice with measurable efficiency gains

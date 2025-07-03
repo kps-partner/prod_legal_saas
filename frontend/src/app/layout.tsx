@@ -6,8 +6,8 @@ import { AuthProvider } from "@/context/AuthContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "LawFirm OS",
-  description: "Comprehensive law firm management system with AI-powered client intake and case triage",
+  title: "IntakeIntel",
+  description: "AI-powered client intake and case management system for law firms",
 };
 
 export default function RootLayout({

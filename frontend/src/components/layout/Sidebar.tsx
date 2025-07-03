@@ -127,7 +127,7 @@ export function Sidebar() {
       <div className="flex h-16 items-center px-6 border-b border-gray-800">
         <div className="flex items-center">
           <Building2 className="h-8 w-8 text-blue-400 mr-3" />
-          <h1 className="text-xl font-semibold text-white">LawFirm OS</h1>
+          <h1 className="text-xl font-semibold text-white">IntakeIntel</h1>
         </div>
       </div>
 
@@ -193,6 +193,17 @@ export function Sidebar() {
             <p className="text-sm font-medium text-white">{user.name}</p>
             <p className="text-xs text-gray-400">{user.role}</p>
           </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-gray-700">
+          <p className="text-xs text-gray-400 leading-relaxed">
+            Have feedback / questions? Email us at{' '}
+            <a
+              href="mailto:kps.product.partner@gmail.com?subject=IntakeIntel Feedback"
+              className="text-blue-400 hover:text-blue-300 underline"
+            >
+              kps.product.partner@gmail.com
+            </a>
+          </p>
         </div>
       </div>
     </div>
