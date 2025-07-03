@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { CaseAnalytics } from '@/components/analytics/CaseAnalytics';
 import { GmailPermissionAlert } from '@/components/GmailPermissionAlert';
+import { SubscriptionBanner } from '@/components/SubscriptionBanner';
 import { apiClient } from '@/lib/api';
 
 export default function DashboardPage() {
@@ -87,6 +88,9 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4">
+      {/* Subscription Banner */}
+      <SubscriptionBanner />
+
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Dashboard</h1>
         <p className="text-gray-600 text-sm">Overview of your law firm's performance and key metrics</p>

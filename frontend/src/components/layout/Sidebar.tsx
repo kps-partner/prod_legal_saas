@@ -4,61 +4,90 @@ import { useAuth } from '@/context/AuthContext';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { 
-  LayoutDashboard, 
-  Briefcase, 
-  FileText, 
-  Calendar, 
-  CreditCard, 
+import {
+  LayoutDashboard,
+  Briefcase,
+  FileText,
+  Calendar,
+  CreditCard,
   Settings,
-  Building2
+  Building2,
+  Lock
 } from 'lucide-react';
+import { User } from '@/lib/api';
 
 interface NavigationItem {
   name: string;
   path: string;
   icon: React.ComponentType<{ className?: string }>;
   roles: string[];
+  requiresSubscription?: boolean;
+}
+
+interface NavigationState {
+  visible: boolean;
+  disabled: boolean;
+  tooltip?: string;
 }
 
 const navigationItems: NavigationItem[] = [
-  { 
-    name: 'Dashboard', 
-    path: '/dashboard', 
-    icon: LayoutDashboard, 
-    roles: ['Admin', 'Paralegal'] 
+  {
+    name: 'Dashboard',
+    path: '/dashboard',
+    icon: LayoutDashboard,
+    roles: ['Admin', 'Paralegal'],
+    requiresSubscription: false
   },
-  { 
-    name: 'Case Management', 
-    path: '/cases', 
-    icon: Briefcase, 
-    roles: ['Admin', 'Paralegal'] 
+  {
+    name: 'Case Management',
+    path: '/cases',
+    icon: Briefcase,
+    roles: ['Admin', 'Paralegal'],
+    requiresSubscription: true // 🔒 Requires subscription
   },
-  { 
-    name: 'Intake Page Settings', 
-    path: '/settings/intake-page', 
-    icon: FileText, 
-    roles: ['Admin'] 
+  {
+    name: 'Intake Page Settings',
+    path: '/settings/intake-page',
+    icon: FileText,
+    roles: ['Admin'],
+    requiresSubscription: true // 🔒 Requires subscription
   },
-  { 
-    name: 'Schedule', 
-    path: '/settings/integrations', 
-    icon: Calendar, 
-    roles: ['Admin'] 
+  {
+    name: 'Schedule',
+    path: '/settings/integrations',
+    icon: Calendar,
+    roles: ['Admin'],
+    requiresSubscription: true // 🔒 Requires subscription
   },
-  { 
-    name: 'Subscription', 
-    path: '/settings/billing', 
-    icon: CreditCard, 
-    roles: ['Admin'] 
+  {
+    name: 'Subscription',
+    path: '/settings/billing',
+    icon: CreditCard,
+    roles: ['Admin'],
+    requiresSubscription: false
   },
-  { 
-    name: 'Settings', 
-    path: '/settings', 
-    icon: Settings, 
-    roles: ['Admin', 'Paralegal'] 
+  {
+    name: 'Settings',
+    path: '/settings',
+    icon: Settings,
+    roles: ['Admin', 'Paralegal'],
+    requiresSubscription: false
   },
 ];
+
+// Helper function to determine navigation state based on user and subscription
+const getNavigationState = (item: NavigationItem, user: User): NavigationState => {
+  const hasRole = item.roles.includes(user.role);
+  const hasActiveSubscription = user.subscription_status === 'active' ||
+                               user.subscription_status === 'canceling';
+  const isDisabled = Boolean(item.requiresSubscription && !hasActiveSubscription);
+  
+  return {
+    visible: hasRole,
+    disabled: isDisabled,
+    tooltip: isDisabled ? 'Subscription required for this feature' : undefined
+  };
+};
 
 export function Sidebar() {
   const { user } = useAuth();
@@ -66,10 +95,11 @@ export function Sidebar() {
 
   if (!user) return null;
 
-  // Filter navigation items based on user role
-  const allowedItems = navigationItems.filter(item => 
-    item.roles.includes(user.role)
-  );
+  // Get navigation items with their states (visible, disabled, tooltip)
+  const navigationStates = navigationItems.map(item => ({
+    item,
+    state: getNavigationState(item, user)
+  })).filter(({ state }) => state.visible);
 
   const isActive = (path: string) => {
     if (path === '/dashboard') {
@@ -84,6 +114,13 @@ export function Sidebar() {
     return pathname.startsWith(path);
   };
 
+  const handleNavClick = (e: React.MouseEvent, item: NavigationItem, disabled: boolean) => {
+    if (disabled) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
   return (
     <div className="flex h-full w-64 flex-col bg-gray-900">
       {/* Logo/Brand */}
@@ -96,24 +133,48 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-2">
-        {allowedItems.map((item) => {
+        {navigationStates.map(({ item, state }) => {
           const Icon = item.icon;
           const active = isActive(item.path);
+          const disabled = state.disabled;
           
           return (
-            <Link
-              key={item.path}
-              href={item.path}
-              className={cn(
-                'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                active
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+            <div key={item.path} className="relative group">
+              <Link
+                href={disabled ? '#' : item.path}
+                onClick={(e) => handleNavClick(e, item, disabled)}
+                className={cn(
+                  'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors relative',
+                  disabled
+                    ? 'text-gray-500 cursor-not-allowed'
+                    : active
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                )}
+                title={state.tooltip}
+              >
+                <div className="flex items-center">
+                  <Icon className={cn(
+                    "h-5 w-5 mr-3",
+                    disabled && "opacity-50"
+                  )} />
+                  <span className={disabled ? "opacity-50" : ""}>
+                    {item.name}
+                  </span>
+                  {disabled && (
+                    <Lock className="h-3 w-3 ml-2 opacity-50" />
+                  )}
+                </div>
+              </Link>
+              
+              {/* Tooltip for disabled items */}
+              {disabled && state.tooltip && (
+                <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  {state.tooltip}
+                  <div className="absolute right-full top-1/2 transform -translate-y-1/2 border-4 border-transparent border-r-gray-800"></div>
+                </div>
               )}
-            >
-              <Icon className="h-5 w-5 mr-3" />
-              {item.name}
-            </Link>
+            </div>
           );
         })}
       </nav>
