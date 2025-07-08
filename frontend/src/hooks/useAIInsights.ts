@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getApiUrl } from '../lib/api-config';
 
 interface AIInsight {
   case_id: string;
@@ -57,7 +58,7 @@ export function useAIInsights(caseIds: string[]) {
         console.log(`AI Insights Hook - About to fetch for Case ${caseId}`);
       }
       
-      const response = await fetch(`http://localhost:8000/api/v1/ai/insights/${caseId}`, {
+      const response = await fetch(getApiUrl(`/api/v1/ai/insights/${caseId}`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

@@ -1,9 +1,13 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL_WITH_VERSION = process.env.NEXT_PUBLIC_API_BASE_URL_WITH_VERSION || 'http://localhost:8000';
+
+// Ensure we have the /api/v1 suffix for this file's usage
+const API_BASE_URL_WITH_VERSION_WITH_VERSION = `${API_BASE_URL_WITH_VERSION}/api/v1`;
 
 // Debug logging for API configuration
 console.log('🔧 API Configuration Debug:');
-console.log('  NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
-console.log('  Final API_BASE_URL:', API_BASE_URL);
+console.log('  NEXT_PUBLIC_API_BASE_URL_WITH_VERSION:', process.env.NEXT_PUBLIC_API_BASE_URL_WITH_VERSION);
+console.log('  Final API_BASE_URL_WITH_VERSION:', API_BASE_URL_WITH_VERSION);
+console.log('  Final API_BASE_URL_WITH_VERSION_WITH_VERSION:', API_BASE_URL_WITH_VERSION_WITH_VERSION);
 console.log('  Environment:', process.env.NODE_ENV);
 
 // Utility function to detect client timezone
@@ -60,7 +64,7 @@ class ApiClient {
   }
 
   async register(data: RegisterRequest): Promise<User> {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION_WITH_VERSION}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -81,7 +85,7 @@ class ApiClient {
     formData.append('username', data.username);
     formData.append('password', data.password);
 
-    const response = await fetch(`${API_BASE_URL}/auth/token`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION_WITH_VERSION}/auth/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -98,7 +102,7 @@ class ApiClient {
   }
 
   async getCurrentUser(): Promise<User> {
-    const response = await fetch(`${API_BASE_URL}/users/me`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION_WITH_VERSION}/users/me`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -112,7 +116,7 @@ class ApiClient {
   }
 
   async createCheckoutSession(priceId: string): Promise<{ url: string }> {
-    const response = await fetch(`${API_BASE_URL}/billing/create-checkout-session`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/billing/create-checkout-session`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ price_id: priceId }),
@@ -127,7 +131,7 @@ class ApiClient {
   }
 
   async createCustomerPortalSession(): Promise<{ url: string }> {
-    const response = await fetch(`${API_BASE_URL}/billing/create-customer-portal-session`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/billing/create-customer-portal-session`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
     });
@@ -141,7 +145,7 @@ class ApiClient {
   }
 
   async cancelSubscription(): Promise<{ message: string; subscription_id: string; current_period_end: number; cancel_at_period_end: boolean }> {
-    const response = await fetch(`${API_BASE_URL}/billing/cancel-subscription`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/billing/cancel-subscription`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
     });
@@ -156,7 +160,7 @@ class ApiClient {
 
   // Google Calendar Integration endpoints
   async getGoogleAuthUrl(): Promise<{ auth_url: string }> {
-    const response = await fetch(`${API_BASE_URL}/integrations/google/authorize`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/integrations/google/authorize`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -170,7 +174,7 @@ class ApiClient {
   }
 
   async getGoogleCalendars(): Promise<{ calendars: Array<{ id: string; summary: string; primary?: boolean }> }> {
-    const response = await fetch(`${API_BASE_URL}/integrations/google/calendars`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/integrations/google/calendars`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -184,7 +188,7 @@ class ApiClient {
   }
 
   async selectGoogleCalendar(calendarId: string, calendarName: string): Promise<{ status: string; message: string }> {
-    const response = await fetch(`${API_BASE_URL}/integrations/google/calendars/select`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/integrations/google/calendars/select`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify({
@@ -210,7 +214,7 @@ class ApiClient {
     required_scopes?: string[];
     needs_reauth?: boolean;
   }> {
-    const response = await fetch(`${API_BASE_URL}/integrations/google/status`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/integrations/google/status`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -225,7 +229,7 @@ class ApiClient {
 
   // Case Types Settings endpoints
   async getCaseTypes(): Promise<CaseType[]> {
-    const response = await fetch(`${API_BASE_URL}/settings/case-types`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/settings/case-types`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -239,7 +243,7 @@ class ApiClient {
   }
 
   async createCaseType(data: CaseTypeCreate): Promise<CaseType> {
-    const response = await fetch(`${API_BASE_URL}/settings/case-types`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/settings/case-types`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -254,7 +258,7 @@ class ApiClient {
   }
 
   async updateCaseType(id: string, data: CaseTypeUpdate): Promise<CaseType> {
-    const response = await fetch(`${API_BASE_URL}/settings/case-types/${id}`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/settings/case-types/${id}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -269,7 +273,7 @@ class ApiClient {
   }
 
   async deleteCaseType(id: string): Promise<{ message: string }> {
-    const response = await fetch(`${API_BASE_URL}/settings/case-types/${id}`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/settings/case-types/${id}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
@@ -284,7 +288,7 @@ class ApiClient {
 
   // Intake Page Settings endpoints
   async getIntakePageSettings(): Promise<IntakePageSetting> {
-    const response = await fetch(`${API_BASE_URL}/settings/intake-page`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/settings/intake-page`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -298,7 +302,7 @@ class ApiClient {
   }
 
   async updateIntakePageSettings(data: IntakePageSettingUpdate): Promise<IntakePageSetting> {
-    const response = await fetch(`${API_BASE_URL}/settings/intake-page`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/settings/intake-page`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -314,7 +318,7 @@ class ApiClient {
 
   // Public Intake Form endpoints (no authentication required)
   async getPublicIntakePageData(firmId: string): Promise<PublicIntakePageData> {
-    const response = await fetch(`${API_BASE_URL}/public/intake/${firmId}`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/public/intake/${firmId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -330,7 +334,7 @@ class ApiClient {
   }
 
   async submitPublicIntakeForm(firmId: string, data: IntakeFormSubmissionData): Promise<IntakeFormSubmissionResponse> {
-    const response = await fetch(`${API_BASE_URL}/public/intake/${firmId}/submit`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/public/intake/${firmId}/submit`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -366,7 +370,7 @@ class ApiClient {
 
   // Public Calendar Booking endpoints (no authentication required)
   async getPublicAvailability(firmId: string): Promise<AvailabilityResponse> {
-    const response = await fetch(`${API_BASE_URL}/public/availability/${firmId}`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/public/availability/${firmId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -382,7 +386,7 @@ class ApiClient {
   }
 
   async createPublicBooking(caseId: string, booking: BookingRequest): Promise<BookingResponse> {
-    const response = await fetch(`${API_BASE_URL}/public/booking/${caseId}`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/public/booking/${caseId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -416,7 +420,7 @@ class ApiClient {
 
   // Case Detail and Timeline endpoints
   async getCaseById(caseId: string): Promise<CaseDetailResponse> {
-    const response = await fetch(`${API_BASE_URL}/cases/${caseId}`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/cases/${caseId}`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -430,7 +434,7 @@ class ApiClient {
   }
 
   async getCaseTimeline(caseId: string): Promise<TimelineResponse> {
-    const response = await fetch(`${API_BASE_URL}/cases/${caseId}/timeline`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/cases/${caseId}/timeline`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -444,7 +448,7 @@ class ApiClient {
   }
 
   async addTimelineNote(caseId: string, content: string): Promise<TimelineEventResponse> {
-    const response = await fetch(`${API_BASE_URL}/cases/${caseId}/timeline`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/cases/${caseId}/timeline`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ content }),
@@ -460,7 +464,7 @@ class ApiClient {
 
   // User Management endpoints (Admin only)
   async getUsers(): Promise<UserListResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/settings/users`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/auth/settings/users`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -474,7 +478,7 @@ class ApiClient {
   }
 
   async inviteUser(data: UserInviteRequest): Promise<UserInviteResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/settings/users/invite`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/auth/settings/users/invite`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -489,7 +493,7 @@ class ApiClient {
   }
 
   async updateUser(userId: string, data: UserUpdateRequest): Promise<User> {
-    const response = await fetch(`${API_BASE_URL}/auth/settings/users/${userId}`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/auth/settings/users/${userId}`, {
       method: 'PATCH',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -504,7 +508,7 @@ class ApiClient {
   }
 
   async deleteUser(userId: string): Promise<{ message: string }> {
-    const response = await fetch(`${API_BASE_URL}/auth/settings/users/${userId}`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/auth/settings/users/${userId}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
@@ -518,7 +522,7 @@ class ApiClient {
   }
 
   async changePassword(data: PasswordChangeRequest): Promise<PasswordChangeResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/auth/change-password`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -534,7 +538,7 @@ class ApiClient {
 
   // Availability Management endpoints
   async getTimezones(): Promise<TimezonesResponse> {
-    const response = await fetch(`${API_BASE_URL}/integrations/timezones`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/integrations/timezones`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -548,7 +552,7 @@ class ApiClient {
   }
 
   async getAvailability(): Promise<AvailabilitySettings> {
-    const response = await fetch(`${API_BASE_URL}/integrations/availability`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/integrations/availability`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -562,7 +566,7 @@ class ApiClient {
   }
 
   async updateAvailability(data: AvailabilityUpdateRequest): Promise<AvailabilitySettings> {
-    const response = await fetch(`${API_BASE_URL}/integrations/availability`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/integrations/availability`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -577,7 +581,7 @@ class ApiClient {
   }
 
   async getBlockedDates(): Promise<BlockedDatesResponse> {
-    const response = await fetch(`${API_BASE_URL}/integrations/blocked-dates`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/integrations/blocked-dates`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -591,7 +595,7 @@ class ApiClient {
   }
 
   async createBlockedDate(data: BlockedDateCreateRequest): Promise<BlockedDate> {
-    const response = await fetch(`${API_BASE_URL}/integrations/blocked-dates`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/integrations/blocked-dates`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -606,7 +610,7 @@ class ApiClient {
   }
 
   async checkBlockedDateConflicts(data: BlockedDateCreateRequest): Promise<ConflictResponse> {
-    const response = await fetch(`${API_BASE_URL}/integrations/blocked-dates/check-conflicts`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/integrations/blocked-dates/check-conflicts`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -621,7 +625,7 @@ class ApiClient {
   }
 
   async checkAppointmentConflicts(startDate: string, endDate: string): Promise<ConflictResponse> {
-    const response = await fetch(`${API_BASE_URL}/integrations/blocked-dates/check-conflicts`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/integrations/blocked-dates/check-conflicts`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify({
@@ -639,7 +643,7 @@ class ApiClient {
   }
 
   async deleteBlockedDate(blockedDateId: string): Promise<{ message: string }> {
-    const response = await fetch(`${API_BASE_URL}/integrations/blocked-dates/${blockedDateId}`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/integrations/blocked-dates/${blockedDateId}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
@@ -652,7 +656,7 @@ class ApiClient {
     return response.json();
   }
   async getAnalytics(timePeriod: string): Promise<AnalyticsResponse> {
-    const response = await fetch(`${API_BASE_URL}/analytics?time_period=${timePeriod}`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/analytics?time_period=${timePeriod}`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
