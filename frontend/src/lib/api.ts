@@ -1,5 +1,11 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+// Debug logging for API configuration
+console.log('🔧 API Configuration Debug:');
+console.log('  NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
+console.log('  Final API_BASE_URL:', API_BASE_URL);
+console.log('  Environment:', process.env.NODE_ENV);
+
 // Utility function to detect client timezone
 export const getClientTimezone = (): string => {
   try {

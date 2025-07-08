@@ -61,8 +61,8 @@ async def create_checkout_session(price_id: str, current_user: User):
                 },
             ],
             mode="subscription",
-            success_url="http://localhost:3000/dashboard?success=true",
-            cancel_url="http://localhost:3000/dashboard?canceled=true",
+            success_url=f"{settings.FRONTEND_URL}/dashboard?success=true",
+            cancel_url=f"{settings.FRONTEND_URL}/dashboard?canceled=true",
             customer=customer_id,
         )
         return checkout_session
@@ -97,7 +97,7 @@ async def create_customer_portal_session(current_user: User):
         # Create the customer portal session
         portal_session = stripe.billing_portal.Session.create(
             customer=stripe_customer_id,
-            return_url="http://localhost:3000/settings/billing",
+            return_url=f"{settings.FRONTEND_URL}/settings/billing",
         )
         
         print(f"Successfully created customer portal session: {portal_session.id}")

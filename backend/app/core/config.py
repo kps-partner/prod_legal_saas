@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
     
+    # Frontend URL Configuration
+    FRONTEND_URL: str = "http://localhost:3000"
+    
     # OpenAI Configuration
     OPENAI_API_KEY: str
     
