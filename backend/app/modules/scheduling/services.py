@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Google OAuth2 configuration - now includes Gmail API scope
 SCOPES = settings.GMAIL_API_SCOPES
-REDIRECT_URI = 'http://127.0.0.1:8000/api/v1/integrations/google/callback'
+REDIRECT_URI = settings.GOOGLE_REDIRECT_URI
 
 
 def get_google_oauth_flow() -> Flow:

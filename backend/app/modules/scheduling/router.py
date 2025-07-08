@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
+from app.core.config import settings
 from app.modules.auth.services import get_current_user
 from app.modules.scheduling.services import (
     generate_auth_url,
@@ -58,14 +59,14 @@ def google_oauth_callback(
         
         # Redirect back to the integrations page
         return RedirectResponse(
-            url="http://localhost:3000/settings/integrations?connected=true",
+            url=f"{settings.FRONTEND_URL}/settings/integrations?connected=true",
             status_code=302
         )
         
     except Exception as e:
         logger.error(f"Error in OAuth callback: {e}")
         return RedirectResponse(
-            url="http://localhost:3000/settings/integrations?error=auth_failed",
+            url=f"{settings.FRONTEND_URL}/settings/integrations?error=auth_failed",
             status_code=302
         )
 
