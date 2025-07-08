@@ -56,7 +56,7 @@ export default function SubscriptionManager({ token }: SubscriptionManagerProps)
       <CardHeader>
         <CardTitle>Subscription Management</CardTitle>
         <CardDescription>
-          Manage your law firm's subscription plan
+          Manage your law firm&apos;s subscription plan
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -252,7 +252,7 @@ export default function PublicIntakeForm() {
                 <span>Form Submitted Successfully!</span>
               </CardTitle>
               <CardDescription className="text-lg mt-2">
-                Now let's schedule your consultation with {pageData?.firm_name}
+                Now let&apos;s schedule your consultation with {pageData?.firm_name}
               </CardDescription>
             </CardHeader>
             

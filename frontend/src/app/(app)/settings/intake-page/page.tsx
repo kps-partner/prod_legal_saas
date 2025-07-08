@@ -312,7 +312,7 @@ export default function IntakePageSettingsPage() {
             <CardHeader>
               <CardTitle>Branding</CardTitle>
               <CardDescription>
-                Customize the appearance of your intake form with your firm's branding.
+                Customize the appearance of your intake form with your firm&apos;s branding.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -328,7 +328,7 @@ export default function IntakePageSettingsPage() {
                     className="mt-2"
                   />
                   <p className="text-sm text-gray-500 mt-2">
-                    Enter the URL of your firm's logo. It should be a publicly accessible image (PNG, JPG, or SVG recommended).
+                    Enter the URL of your firm&apos;s logo. It should be a publicly accessible image (PNG, JPG, or SVG recommended).
                   </p>
                 </div>
                 
@@ -356,7 +356,7 @@ export default function IntakePageSettingsPage() {
             <CardHeader>
               <CardTitle>Preview</CardTitle>
               <CardDescription>
-                Here's how your intake form header will look to potential clients.
+                Here&apos;s how your intake form header will look to potential clients.
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from '@/lib/api';
@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertTriangle } from 'lucide-react';
 
-export default function ChangePasswordPage() {
+function ChangePasswordContent() {
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -189,5 +189,20 @@ export default function ChangePasswordPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ChangePasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <h2 className="text-xl font-semibold">Loading...</h2>
+        </div>
+      </div>
+    }>
+      <ChangePasswordContent />
+    </Suspense>
   );
 }

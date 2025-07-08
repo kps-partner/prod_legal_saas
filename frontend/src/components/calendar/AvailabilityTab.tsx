@@ -211,7 +211,7 @@ export function AvailabilityTab() {
             <span>Timezone</span>
           </CardTitle>
           <CardDescription className="text-sm">
-            Select your firm's timezone for scheduling appointments
+            Select your firm&apos;s timezone for scheduling appointments
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">

@@ -455,7 +455,7 @@ export default function CaseDetailPage() {
         ]);
       });
     }
-  }, [token, caseId]);
+  }, [token, caseId, fetchCaseData, fetchTimeline, fetchAIInsights]);
 
   // Cleanup polling timeout on unmount
   useEffect(() => {
@@ -542,7 +542,7 @@ export default function CaseDetailPage() {
           <CardHeader>
             <CardTitle>Case Not Found</CardTitle>
             <CardDescription>
-              The case you're looking for doesn't exist or you don't have access to it.
+              The case you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
             </CardDescription>
           </CardHeader>
           <CardContent>

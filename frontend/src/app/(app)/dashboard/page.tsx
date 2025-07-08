@@ -93,7 +93,7 @@ export default function DashboardPage() {
 
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Dashboard</h1>
-        <p className="text-gray-600 text-sm">Overview of your law firm's performance and key metrics</p>
+        <p className="text-gray-600 text-sm">Overview of your law firm&apos;s performance and key metrics</p>
       </div>
 
       {/* Gmail Permission Alert - Show when connected but missing Gmail permissions */}
