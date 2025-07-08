@@ -1,8 +1,11 @@
 # Render.com Deployment Guide
 
-## 🚨 Problem Solved
-**Issue**: `ERROR: Error loading ASGI app. Could not import module "main".`
+## 🚨 Problems Solved
+**Issue 1**: `ERROR: Error loading ASGI app. Could not import module "main".`
 **Root Cause**: Render was trying to run `uvicorn main:app` from root directory, but FastAPI app is at `backend/app/main.py`
+
+**Issue 2**: `ModuleNotFoundError: No module named 'pydantic_settings'`
+**Root Cause**: Missing `pydantic-settings` dependency in requirements.txt
 
 ## 🛠️ Solution Files Created
 
