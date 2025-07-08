@@ -200,6 +200,48 @@ def delete_case_type(firm_id: str, case_type_id: str) -> bool:
         )
 
 
+def create_default_case_type(firm_id: str) -> Optional[CaseType]:
+    """Create a default 'General' case type for a newly registered firm."""
+    try:
+        # Check if the firm already has any case types
+        existing_case_types = db.case_types.find_one({"firm_id": firm_id})
+        if existing_case_types:
+            print(f"Firm {firm_id} already has case types, skipping default creation")
+            return None
+        
+        # Check if 'General' case type already exists (extra safety check)
+        existing_general = db.case_types.find_one({
+            "firm_id": firm_id,
+            "name": "General"
+        })
+        if existing_general:
+            print(f"General case type already exists for firm {firm_id}")
+            existing_general["_id"] = str(existing_general["_id"])
+            return CaseType(**existing_general)
+        
+        # Create default 'General' case type
+        now = datetime.utcnow()
+        default_case_type = {
+            "name": "General",
+            "firm_id": firm_id,
+            "description": "General legal consultation and services",
+            "is_active": True,
+            "created_at": now,
+            "updated_at": now
+        }
+        
+        result = db.case_types.insert_one(default_case_type)
+        default_case_type["_id"] = str(result.inserted_id)
+        
+        print(f"✅ Created default 'General' case type for firm {firm_id}")
+        return CaseType(**default_case_type)
+        
+    except Exception as e:
+        # Log the error but don't fail the registration process
+        print(f"⚠️ Failed to create default case type for firm {firm_id}: {str(e)}")
+        return None
+
+
 # IntakePageSetting Services
 def get_intake_page_settings(firm_id: str) -> IntakePageSetting:
     """Get intake page settings for a firm. Create default settings if none exist."""

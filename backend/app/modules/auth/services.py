@@ -182,6 +182,14 @@ def create_user(user_data: dict) -> User:
         firm_result = db.firms.insert_one(firm_dict)
         firm_id = str(firm_result.inserted_id)
         
+        # Create default case type for the new firm
+        try:
+            from app.modules.firms.services import create_default_case_type
+            create_default_case_type(firm_id)
+        except Exception as e:
+            # Log the error but don't fail the registration process
+            print(f"⚠️ Failed to create default case type during registration: {str(e)}")
+        
         # Create user
         hashed_password = get_password_hash(user_data["password"])
         user_dict = {
