@@ -136,6 +136,33 @@ def refresh_access_token(credentials: Credentials) -> Credentials:
     return credentials
 
 
+def auto_select_primary_calendar(access_token: str, refresh_token: str, scopes: List[str] = None) -> tuple[str, str]:
+    """Auto-select user's primary calendar with fallback strategy."""
+    try:
+        logger.info("AUTO-SELECT: Attempting to auto-select primary calendar")
+        calendars = get_user_calendars(access_token, refresh_token, scopes)
+        
+        # Strategy 1: Find calendar marked as primary
+        for cal in calendars:
+            if cal.get('primary', False):
+                logger.info(f"AUTO-SELECT: Found primary calendar: {cal['summary']} ({cal['id']})")
+                return cal['id'], cal['summary']
+        
+        # Strategy 2: Use first calendar in list
+        if calendars:
+            first_cal = calendars[0]
+            logger.info(f"AUTO-SELECT: Using first calendar: {first_cal['summary']} ({first_cal['id']})")
+            return first_cal['id'], first_cal['summary']
+        
+        # Strategy 3: Default to Google's primary calendar
+        logger.info("AUTO-SELECT: Using default 'primary' calendar")
+        return "primary", "Primary Calendar"
+        
+    except Exception as e:
+        logger.warning(f"AUTO-SELECT: Failed to auto-select calendar: {e}, using default")
+        return "primary", "Primary Calendar"
+
+
 def get_user_calendars(access_token: str, refresh_token: str, scopes: List[str] = None) -> List[Dict[str, Any]]:
     """Fetch user's Google calendars."""
     try:
@@ -162,7 +189,7 @@ def get_user_calendars(access_token: str, refresh_token: str, scopes: List[str] 
 
 
 def store_calendar_connection(firm_id: str, access_token: str, refresh_token: str, scopes: List[str] = None) -> str:
-    """Store calendar connection in database with enhanced token management."""
+    """Store calendar connection in database with enhanced token management and auto-select primary calendar."""
     logger.info(f"STORE DEBUG: Storing connection for firm {firm_id}")
     logger.info(f"STORE DEBUG: Access token provided: {'Yes' if access_token else 'No'}")
     logger.info(f"STORE DEBUG: Refresh token provided: {'Yes' if refresh_token else 'No'}")
@@ -173,12 +200,23 @@ def store_calendar_connection(firm_id: str, access_token: str, refresh_token: st
     # Check if connection already exists for this firm
     existing = db.connected_calendars.find_one({"firm_id": firm_id})
     
+    # Auto-select primary calendar
+    try:
+        calendar_id, calendar_name = auto_select_primary_calendar(access_token, refresh_token, scopes)
+        logger.info(f"STORE DEBUG: Auto-selected calendar: {calendar_name} ({calendar_id})")
+    except Exception as e:
+        logger.warning(f"STORE DEBUG: Failed to auto-select calendar: {e}, using defaults")
+        calendar_id, calendar_name = "primary", "Primary Calendar"
+    
     calendar_data = {
         "firm_id": firm_id,
         "access_token": access_token,
         "refresh_token": refresh_token,
         "scopes": scopes or SCOPES,
         "connected_at": datetime.utcnow(),
+        # Auto-selected calendar fields
+        "calendar_id": calendar_id,
+        "calendar_name": calendar_name,
         # Initialize enhanced token management fields
         "token_status": "active",
         "token_expiry": None,  # Will be set when we get expiry info
@@ -188,7 +226,7 @@ def store_calendar_connection(firm_id: str, access_token: str, refresh_token: st
         "updated_at": datetime.utcnow()
     }
     
-    logger.info(f"STORE DEBUG: Calendar data to store: {dict(calendar_data, access_token='[REDACTED]')}")
+    logger.info(f"STORE DEBUG: Calendar data to store: {dict(calendar_data, access_token='[REDACTED]', calendar_id=calendar_id, calendar_name=calendar_name)}")
     
     if existing:
         # Update existing connection, preserving some fields if they exist
