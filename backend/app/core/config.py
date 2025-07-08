@@ -10,7 +10,13 @@ class Settings(BaseSettings):
     STRIPE_WEBHOOK_SECRET: str
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
-    GOOGLE_REDIRECT_URI: str
+    GOOGLE_REDIRECT_URI: str = None
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Set GOOGLE_REDIRECT_URI based on BACKEND_URL if not explicitly provided
+        if not self.GOOGLE_REDIRECT_URI:
+            self.GOOGLE_REDIRECT_URI = f"{self.BACKEND_URL}/api/v1/integrations/google/callback"
     
     # URL Configuration for production deployment
     FRONTEND_URL: str = "http://localhost:3000"
