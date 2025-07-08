@@ -166,6 +166,13 @@ class ConnectedCalendar(BaseModel):
     calendar_id: Optional[str] = None
     calendar_name: Optional[str] = None
     connected_at: datetime = Field(default_factory=datetime.utcnow)
+    # Enhanced token management fields
+    token_status: str = "active"  # "active", "needs_reauth", "expired"
+    token_expiry: Optional[datetime] = None  # When the access token expires
+    last_refresh_attempt: Optional[datetime] = None  # Last time we tried to refresh
+    refresh_error_count: int = 0  # Number of consecutive refresh failures
+    last_refresh_error: Optional[str] = None  # Last refresh error message
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     model_config = {
         "populate_by_name": True,

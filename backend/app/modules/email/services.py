@@ -15,7 +15,7 @@ from googleapiclient.errors import HttpError
 
 from app.core.config import settings
 from app.core.db import get_database
-from app.modules.scheduling.services import get_credentials_from_tokens, refresh_access_token
+from app.modules.scheduling.token_refresh import token_refresh_service
 
 logger = logging.getLogger(__name__)
 
@@ -37,37 +37,20 @@ class GmailEmailService:
         )
     
     async def get_firm_gmail_credentials(self, firm_id: str) -> Optional[Credentials]:
-        """Get Gmail credentials for a firm from the connected calendar."""
+        """Get Gmail credentials for a firm using enhanced token refresh service."""
         try:
             logger.info(f"EMAIL SERVICE DEBUG: Getting Gmail credentials for firm {firm_id}")
-            db = get_database()
-            connection = db.connected_calendars.find_one({"firm_id": firm_id})
             
-            if not connection:
-                logger.error(f"EMAIL SERVICE DEBUG: No Google connection found for firm {firm_id}")
+            # Use enhanced token refresh service
+            token_result = token_refresh_service.get_valid_credentials(firm_id)
+            
+            if not token_result.success:
+                logger.error(f"EMAIL SERVICE DEBUG: Failed to get valid credentials for firm {firm_id}: {token_result.error}")
+                if token_result.needs_reauth:
+                    logger.error(f"EMAIL SERVICE DEBUG: Connection needs re-authentication for firm {firm_id}")
                 return None
             
-            if not connection.get('access_token'):
-                logger.error(f"EMAIL SERVICE DEBUG: Missing access token for firm {firm_id}")
-                return None
-            
-            # Check if refresh token is missing
-            refresh_token = connection.get('refresh_token')
-            if not refresh_token:
-                logger.warning(f"EMAIL SERVICE DEBUG: Missing refresh token for firm {firm_id} - connection may expire soon")
-                logger.warning(f"EMAIL SERVICE DEBUG: Will attempt to use current access token, but user should re-authenticate")
-            
-            # Get stored scopes from the connection
-            stored_scopes = connection.get('scopes', None)
-            logger.info(f"EMAIL SERVICE DEBUG: stored scopes for firm {firm_id}: {stored_scopes}")
-            
-            # Create credentials with stored scopes (refresh_token can be None)
-            credentials = get_credentials_from_tokens(
-                connection['access_token'],
-                refresh_token,  # This can be None
-                stored_scopes
-            )
-            
+            credentials = token_result.credentials
             logger.info(f"EMAIL SERVICE DEBUG: Created credentials with scopes: {credentials.scopes}")
             
             # Check if Gmail scope is available
@@ -76,29 +59,6 @@ class GmailEmailService:
                 logger.error(f"EMAIL SERVICE DEBUG: Gmail scope not available for firm {firm_id}. Available scopes: {credentials.scopes}")
                 logger.error(f"EMAIL SERVICE DEBUG: Looking for scope: {gmail_scope}")
                 return None
-            
-            # Only try to refresh if we have a refresh token and the token is expired
-            if refresh_token and credentials.expired:
-                logger.info(f"EMAIL SERVICE DEBUG: Token expired, attempting refresh")
-                try:
-                    credentials = refresh_access_token(credentials)
-                    logger.info(f"EMAIL SERVICE DEBUG: After refresh, credentials valid: {not credentials.expired}")
-                    
-                    # Update tokens in database if they were refreshed
-                    if credentials.token != connection['access_token']:
-                        logger.info(f"EMAIL SERVICE DEBUG: Updating refreshed token in database")
-                        db.connected_calendars.update_one(
-                            {"firm_id": firm_id},
-                            {"$set": {"access_token": credentials.token}}
-                        )
-                except Exception as refresh_error:
-                    logger.error(f"EMAIL SERVICE DEBUG: Failed to refresh token: {refresh_error}")
-                    return None
-            elif not refresh_token and credentials.expired:
-                logger.error(f"EMAIL SERVICE DEBUG: Token expired and no refresh token available for firm {firm_id}")
-                return None
-            else:
-                logger.info(f"EMAIL SERVICE DEBUG: Using existing token (expired: {credentials.expired})")
             
             logger.info(f"EMAIL SERVICE DEBUG: Gmail credentials successfully obtained for firm {firm_id}")
             return credentials

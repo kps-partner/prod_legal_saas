@@ -229,7 +229,7 @@ def get_firm_availability(firm_id: str) -> Dict:
         from app.modules.scheduling.services import get_calendar_availability
         
         try:
-            available_slots = get_calendar_availability(firm_id)
+            available_slots = get_calendar_availability(firm_id, days=60)
             
             return {
                 "available_slots": available_slots,

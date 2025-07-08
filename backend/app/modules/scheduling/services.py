@@ -8,6 +8,7 @@ from googleapiclient.errors import HttpError
 from app.core.db import get_database
 from app.core.config import settings
 from app.shared.models import ConnectedCalendar
+from app.modules.scheduling.token_refresh import token_refresh_service
 from bson import ObjectId
 from datetime import datetime, timedelta
 import logging
@@ -120,9 +121,18 @@ def get_credentials_from_tokens(access_token: str, refresh_token: str = None, sc
 
 
 def refresh_access_token(credentials: Credentials) -> Credentials:
-    """Refresh the access token if needed."""
+    """
+    Legacy function - now uses enhanced token refresh service.
+    Kept for backward compatibility.
+    """
+    logger.warning("Using legacy refresh_access_token - consider using token_refresh_service directly")
+    
     if credentials.expired and credentials.refresh_token:
-        credentials.refresh(Request())
+        try:
+            credentials.refresh(Request())
+        except Exception as e:
+            logger.error(f"Legacy token refresh failed: {str(e)}")
+            raise
     return credentials
 
 
@@ -152,7 +162,7 @@ def get_user_calendars(access_token: str, refresh_token: str, scopes: List[str] 
 
 
 def store_calendar_connection(firm_id: str, access_token: str, refresh_token: str, scopes: List[str] = None) -> str:
-    """Store calendar connection in database."""
+    """Store calendar connection in database with enhanced token management."""
     logger.info(f"STORE DEBUG: Storing connection for firm {firm_id}")
     logger.info(f"STORE DEBUG: Access token provided: {'Yes' if access_token else 'No'}")
     logger.info(f"STORE DEBUG: Refresh token provided: {'Yes' if refresh_token else 'No'}")
@@ -168,17 +178,29 @@ def store_calendar_connection(firm_id: str, access_token: str, refresh_token: st
         "access_token": access_token,
         "refresh_token": refresh_token,
         "scopes": scopes or SCOPES,
-        "connected_at": datetime.utcnow()
+        "connected_at": datetime.utcnow(),
+        # Initialize enhanced token management fields
+        "token_status": "active",
+        "token_expiry": None,  # Will be set when we get expiry info
+        "last_refresh_attempt": None,
+        "refresh_error_count": 0,
+        "last_refresh_error": None,
+        "updated_at": datetime.utcnow()
     }
     
     logger.info(f"STORE DEBUG: Calendar data to store: {dict(calendar_data, access_token='[REDACTED]')}")
     
     if existing:
-        # Update existing connection
+        # Update existing connection, preserving some fields if they exist
+        update_data = calendar_data.copy()
+        # Don't reset error count if it's a reconnection after errors
+        if existing.get("refresh_error_count", 0) > 0:
+            logger.info(f"STORE DEBUG: Resetting error count from {existing.get('refresh_error_count')} to 0")
+        
         logger.info(f"STORE DEBUG: Updating existing connection for firm {firm_id}")
         db.connected_calendars.update_one(
             {"firm_id": firm_id},
-            {"$set": calendar_data}
+            {"$set": update_data}
         )
         return str(existing["_id"])
     else:
@@ -230,46 +252,13 @@ def get_calendar_connection(firm_id: str) -> Optional[ConnectedCalendar]:
 
 
 def get_calendar_connection_status(firm_id: str) -> Dict[str, Any]:
-    """Get calendar connection status for a firm."""
+    """Get calendar connection status for a firm using enhanced token refresh service."""
     logger.info(f"Getting calendar connection status for firm: {firm_id}")
-    connection = get_calendar_connection(firm_id)
     
-    if connection:
-        logger.info(f"Found connection for firm {firm_id}")
-        # Check if the connection has Gmail sending permissions
-        has_gmail_scope = False
-        gmail_scope = "https://www.googleapis.com/auth/gmail.send"
-        
-        try:
-            # Get credentials and check scopes
-            stored_scopes = getattr(connection, 'scopes', None)
-            logger.info(f"Stored scopes for firm {firm_id}: {stored_scopes}")
-            
-            credentials = get_credentials_from_tokens(connection.access_token, connection.refresh_token, stored_scopes)
-            credentials = refresh_access_token(credentials)
-            
-            logger.info(f"Credentials scopes for firm {firm_id}: {credentials.scopes}")
-            logger.info(f"Looking for Gmail scope: {gmail_scope}")
-            
-            # Check if Gmail scope is present
-            if credentials.scopes and gmail_scope in credentials.scopes:
-                has_gmail_scope = True
-                logger.info(f"Gmail scope found for firm {firm_id}")
-            else:
-                logger.info(f"Gmail scope NOT found for firm {firm_id}")
-        except Exception as e:
-            logger.warning(f"Failed to check Gmail scope for firm {firm_id}: {str(e)}")
-        
-        return {
-            "connected": True,
-            "calendar_id": connection.calendar_id,
-            "calendar_name": connection.calendar_name,
-            "connected_at": connection.connected_at,
-            "has_gmail_permissions": has_gmail_scope,
-            "required_scopes": SCOPES,
-            "needs_reauth": not has_gmail_scope
-        }
-    else:
+    # Get connection health from enhanced service
+    health_info = token_refresh_service.get_connection_health(firm_id)
+    
+    if not health_info["connected"]:
         return {
             "connected": False,
             "calendar_id": None,
@@ -279,9 +268,58 @@ def get_calendar_connection_status(firm_id: str) -> Dict[str, Any]:
             "required_scopes": SCOPES,
             "needs_reauth": False
         }
+    
+    # Get connection details
+    connection = get_calendar_connection(firm_id)
+    if not connection:
+        return {
+            "connected": False,
+            "calendar_id": None,
+            "calendar_name": None,
+            "connected_at": None,
+            "has_gmail_permissions": False,
+            "required_scopes": SCOPES,
+            "needs_reauth": True
+        }
+    
+    # Check Gmail scope availability
+    has_gmail_scope = False
+    gmail_scope = "https://www.googleapis.com/auth/gmail.send"
+    
+    try:
+        # Get valid credentials using enhanced service
+        token_result = token_refresh_service.get_valid_credentials(firm_id)
+        
+        if token_result.success and token_result.credentials:
+            logger.info(f"Credentials scopes for firm {firm_id}: {token_result.credentials.scopes}")
+            
+            # Check if Gmail scope is present
+            if token_result.credentials.scopes and gmail_scope in token_result.credentials.scopes:
+                has_gmail_scope = True
+                logger.info(f"Gmail scope found for firm {firm_id}")
+            else:
+                logger.info(f"Gmail scope NOT found for firm {firm_id}")
+        else:
+            logger.warning(f"Failed to get valid credentials for firm {firm_id}: {token_result.error}")
+    
+    except Exception as e:
+        logger.warning(f"Failed to check Gmail scope for firm {firm_id}: {str(e)}")
+    
+    return {
+        "connected": True,
+        "calendar_id": connection.calendar_id,
+        "calendar_name": connection.calendar_name,
+        "connected_at": connection.connected_at,
+        "has_gmail_permissions": has_gmail_scope,
+        "required_scopes": SCOPES,
+        "needs_reauth": health_info["needs_reauth"],
+        "token_status": health_info.get("status", "unknown"),
+        "error_count": health_info.get("error_count", 0),
+        "last_error": health_info.get("last_error")
+    }
 
 
-def get_calendar_availability(firm_id: str, days: int = 14) -> List[Dict[str, Any]]:
+def get_calendar_availability(firm_id: str, days: int = 60) -> List[Dict[str, Any]]:
     """Get available time slots for a firm's calendar, respecting availability settings and blocked dates."""
     try:
         logger.info(f"TIMEZONE DEBUG: Getting calendar availability for firm {firm_id}")
@@ -294,10 +332,20 @@ def get_calendar_availability(firm_id: str, days: int = 14) -> List[Dict[str, An
         availability = get_firm_availability(firm_id)
         blocked_dates = get_blocked_dates(firm_id)
         
-        credentials = get_credentials_from_tokens(connection.access_token, connection.refresh_token)
-        credentials = refresh_access_token(credentials)
+        # Use enhanced token refresh service
+        token_result = token_refresh_service.get_valid_credentials(firm_id)
+        if not token_result.success:
+            logger.error(f"Failed to get valid credentials for firm {firm_id}: {token_result.error}")
+            if token_result.needs_reauth:
+                raise Exception("Google Calendar authentication has expired. Please reconnect your calendar in the integrations settings.")
+            else:
+                raise Exception(f"Calendar authentication error: {token_result.error}")
         
-        service = build('calendar', 'v3', credentials=credentials)
+        try:
+            service = build('calendar', 'v3', credentials=token_result.credentials)
+        except Exception as service_error:
+            logger.error(f"Failed to build calendar service for firm {firm_id}: {str(service_error)}")
+            raise Exception("Failed to connect to Google Calendar service")
         
         # Get current time and end time
         now = datetime.utcnow()
@@ -429,13 +477,16 @@ def create_calendar_appointment(firm_id: str, case_id: str, start_time: datetime
             logger.error(f"No calendar connection found for firm {firm_id}")
             raise Exception("No calendar connection found for this firm")
         
-        # Get stored scopes from the connection
-        stored_scopes = getattr(connection, 'scopes', None)
+        # Use enhanced token refresh service
+        token_result = token_refresh_service.get_valid_credentials(firm_id)
+        if not token_result.success:
+            logger.error(f"Failed to get valid credentials for appointment creation for firm {firm_id}: {token_result.error}")
+            if token_result.needs_reauth:
+                raise Exception("Google Calendar authentication has expired. Please reconnect your calendar in the integrations settings.")
+            else:
+                raise Exception(f"Calendar authentication error: {token_result.error}")
         
-        credentials = get_credentials_from_tokens(connection.access_token, connection.refresh_token, stored_scopes)
-        credentials = refresh_access_token(credentials)
-        
-        service = build('calendar', 'v3', credentials=credentials)
+        service = build('calendar', 'v3', credentials=token_result.credentials)
         
         # Calculate end time (1 hour appointment)
         end_time = start_time + timedelta(hours=1)

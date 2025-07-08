@@ -56,8 +56,14 @@ export default function IntegrationsPage() {
       setStatus(statusData);
       
       if (statusData.connected) {
-        const calendarsData = await apiClient.getGoogleCalendars();
-        setCalendars(calendarsData.calendars);
+        try {
+          const calendarsData = await apiClient.getGoogleCalendars();
+          setCalendars(calendarsData.calendars);
+        } catch (calendarError) {
+          console.error('Error fetching calendars:', calendarError);
+          // Don't set error for calendar fetch failure - the integration status was successful
+          // The user will see that the integration is connected but calendars may need re-auth
+        }
       }
     } catch (error) {
       console.error('Error fetching status:', error);
@@ -163,10 +169,17 @@ export default function IntegrationsPage() {
               </div>
               <div className="flex items-center space-x-2">
                 {status?.connected ? (
-                  <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Connected
-                  </Badge>
+                  status?.needs_reauth ? (
+                    <Badge variant="destructive" className="text-xs">
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      Needs Re-auth
+                    </Badge>
+                  ) : (
+                    <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Connected
+                    </Badge>
+                  )
                 ) : (
                   <Badge variant="secondary" className="text-xs">
                     <AlertCircle className="h-3 w-3 mr-1" />
@@ -199,22 +212,50 @@ export default function IntegrationsPage() {
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-md border border-green-200">
+              <div className={`flex items-center justify-between p-3 rounded-md border ${
+                status?.needs_reauth
+                  ? 'bg-yellow-50 border-yellow-200'
+                  : 'bg-green-50 border-green-200'
+              }`}>
                 <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  {status?.needs_reauth ? (
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  )}
                   <div>
-                    <div className="font-medium text-green-900 text-sm">
+                    <div className={`font-medium text-sm ${
+                      status?.needs_reauth ? 'text-yellow-900' : 'text-green-900'
+                    }`}>
                       {status.calendar_name || 'Google Calendar Connected'}
                     </div>
-                    <div className="text-xs text-green-700">
-                      Connected on {status.connected_at ? formatDate(status.connected_at) : 'Unknown'}
+                    <div className={`text-xs ${
+                      status?.needs_reauth ? 'text-yellow-700' : 'text-green-700'
+                    }`}>
+                      {status?.needs_reauth
+                        ? 'Authentication expired - please reconnect'
+                        : `Connected on ${status.connected_at ? formatDate(status.connected_at) : 'Unknown'}`
+                      }
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="text-xs">
-                  <Settings className="h-3 w-3 mr-1" />
-                  Manage
-                </Button>
+                {status?.needs_reauth ? (
+                  <Button onClick={handleConnect} disabled={connecting} size="sm" variant="outline">
+                    {connecting ? (
+                      'Reconnecting...'
+                    ) : (
+                      <>
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Reconnect
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" className="text-xs">
+                    <Settings className="h-3 w-3 mr-1" />
+                    Manage
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>

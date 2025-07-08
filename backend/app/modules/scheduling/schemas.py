@@ -32,3 +32,10 @@ class CalendarConnectionStatus(BaseModel):
     calendar_id: Optional[str] = None
     calendar_name: Optional[str] = None
     connected_at: Optional[datetime] = None
+    has_gmail_permissions: bool = False
+    required_scopes: Optional[List[str]] = None
+    needs_reauth: bool = False
+    # Enhanced token status fields
+    token_status: Optional[str] = None
+    error_count: Optional[int] = None
+    last_error: Optional[str] = None
