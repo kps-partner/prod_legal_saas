@@ -445,6 +445,7 @@ export default function CaseDetailPage() {
   };
 
   useEffect(() => {
+    console.log('🔄 Case details useEffect triggered - this should only run once per caseId/token change');
     if (token && caseId) {
       // Fetch case data first, then timeline and AI insights in parallel
       fetchCaseData().then(() => {
@@ -455,7 +456,7 @@ export default function CaseDetailPage() {
         ]);
       });
     }
-  }, [token, caseId, fetchCaseData, fetchTimeline, fetchAIInsights]);
+  }, [token, caseId]); // FIXED: Removed function dependencies that cause infinite loop
 
   // Cleanup polling timeout on unmount
   useEffect(() => {
