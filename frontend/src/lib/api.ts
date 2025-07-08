@@ -1,13 +1,13 @@
-const API_BASE_URL_WITH_VERSION = process.env.NEXT_PUBLIC_API_BASE_URL_WITH_VERSION || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 // Ensure we have the /api/v1 suffix for this file's usage
-const API_BASE_URL_WITH_VERSION_WITH_VERSION = `${API_BASE_URL_WITH_VERSION}/api/v1`;
+const API_BASE_URL_WITH_VERSION = `${API_BASE_URL}/api/v1`;
 
 // Debug logging for API configuration
 console.log('🔧 API Configuration Debug:');
-console.log('  NEXT_PUBLIC_API_BASE_URL_WITH_VERSION:', process.env.NEXT_PUBLIC_API_BASE_URL_WITH_VERSION);
+console.log('  NEXT_PUBLIC_API_BASE_URL:', process.env.NEXT_PUBLIC_API_BASE_URL);
+console.log('  Final API_BASE_URL:', API_BASE_URL);
 console.log('  Final API_BASE_URL_WITH_VERSION:', API_BASE_URL_WITH_VERSION);
-console.log('  Final API_BASE_URL_WITH_VERSION_WITH_VERSION:', API_BASE_URL_WITH_VERSION_WITH_VERSION);
 console.log('  Environment:', process.env.NODE_ENV);
 
 // Utility function to detect client timezone
@@ -64,7 +64,7 @@ class ApiClient {
   }
 
   async register(data: RegisterRequest): Promise<User> {
-    const response = await fetch(`${API_BASE_URL_WITH_VERSION_WITH_VERSION}/auth/register`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ class ApiClient {
     formData.append('username', data.username);
     formData.append('password', data.password);
 
-    const response = await fetch(`${API_BASE_URL_WITH_VERSION_WITH_VERSION}/auth/token`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/auth/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -102,7 +102,7 @@ class ApiClient {
   }
 
   async getCurrentUser(): Promise<User> {
-    const response = await fetch(`${API_BASE_URL_WITH_VERSION_WITH_VERSION}/users/me`, {
+    const response = await fetch(`${API_BASE_URL_WITH_VERSION}/users/me`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
