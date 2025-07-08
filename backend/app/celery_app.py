@@ -10,8 +10,8 @@ load_dotenv()
 # Create Celery instance
 celery_app = Celery(
     "lawfirm_os",
-    broker=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
-    backend=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+    broker=os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),
+    backend=os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0"),
     include=["app.modules.ai.tasks"]
 )
 
