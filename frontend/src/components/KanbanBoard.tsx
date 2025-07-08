@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CompactCaseCard } from './CompactCaseCard';
 import { Calendar, Mail, Phone, Clock, AlertCircle, CheckCircle2, Users, FileText, Archive, ExternalLink } from 'lucide-react';
+import { getApiUrl } from '@/lib/api-config';
 
 interface Case {
   id: string;
@@ -118,7 +119,7 @@ export function KanbanBoard({ cases, onStatusChange, showArchived }: KanbanBoard
       
       console.log(`🔍 Fetching AI insights for case ${caseId}...`);
       
-      const response = await fetch(`http://localhost:8000/api/v1/ai/insights/${caseId}`, {
+      const response = await fetch(getApiUrl(`/api/v1/ai/insights/${caseId}`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

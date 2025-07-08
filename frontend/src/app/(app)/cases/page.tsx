@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, Plus, Users, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { getApiUrl, API_ENDPOINTS } from '@/lib/api-config';
 
 interface Case {
   id: string;
@@ -47,9 +48,13 @@ export default function CasesPage() {
 
     try {
       setLoading(true);
-      const endpoint = includeArchived 
-        ? 'http://localhost:8000/api/v1/cases/archived'
-        : 'http://localhost:8000/api/v1/cases';
+      const endpoint = includeArchived
+        ? getApiUrl(API_ENDPOINTS.CASES_ARCHIVED)
+        : getApiUrl(API_ENDPOINTS.CASES);
+      
+      console.log('🔍 DIAGNOSIS: Attempting to fetch cases from:', endpoint);
+      console.log('🔍 DIAGNOSIS: Current environment:', process.env.NODE_ENV);
+      console.log('🔍 DIAGNOSIS: API Base URL env var:', process.env.NEXT_PUBLIC_API_BASE_URL);
       
       const response = await fetch(endpoint, {
         headers: {
@@ -77,7 +82,7 @@ export default function CasesPage() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/cases/${caseId}/status`, {
+      const response = await fetch(getApiUrl(`/api/v1/cases/${caseId}/status`), {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

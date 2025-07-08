@@ -26,6 +26,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
+import { getApiUrl } from '@/lib/api-config';
 
 interface Case {
   id: string;
@@ -122,7 +123,7 @@ export default function CaseDetailPage() {
 
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:8000/api/v1/cases/${caseId}`, {
+      const response = await fetch(getApiUrl(`/api/v1/cases/${caseId}`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -152,7 +153,7 @@ export default function CaseDetailPage() {
 
     try {
       setTimelineLoading(true);
-      const response = await fetch(`http://localhost:8000/api/v1/cases/${caseId}/timeline`, {
+      const response = await fetch(getApiUrl(`/api/v1/cases/${caseId}/timeline`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -178,7 +179,7 @@ export default function CaseDetailPage() {
 
     try {
       setSubmittingNote(true);
-      const response = await fetch(`http://localhost:8000/api/v1/cases/${caseId}/timeline`, {
+      const response = await fetch(getApiUrl(`/api/v1/cases/${caseId}/timeline`), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -213,7 +214,7 @@ export default function CaseDetailPage() {
       setAiInsightLoading(true);
       setAiInsightError(null);
       
-      const response = await fetch(`http://localhost:8000/api/v1/ai/insights/${caseId}`, {
+      const response = await fetch(getApiUrl(`/api/v1/ai/insights/${caseId}`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -261,7 +262,7 @@ export default function CaseDetailPage() {
         throw new Error('No note content selected for analysis');
       }
 
-      const response = await fetch(`http://localhost:8000/api/v1/ai/insights/generate?case_id=${caseId}&notes_text=${encodeURIComponent(selectedNotesContent)}`, {
+      const response = await fetch(getApiUrl(`/api/v1/ai/insights/generate?case_id=${caseId}&notes_text=${encodeURIComponent(selectedNotesContent)}`), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -307,7 +308,7 @@ export default function CaseDetailPage() {
 
       try {
         // Fetch insights and get the response directly
-        const response = await fetch(`http://localhost:8000/api/v1/ai/insights/${caseId}`, {
+        const response = await fetch(getApiUrl(`/api/v1/ai/insights/${caseId}`), {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -385,7 +386,7 @@ export default function CaseDetailPage() {
         throw new Error('No note content selected for analysis');
       }
 
-      const response = await fetch(`http://localhost:8000/api/v1/ai/insights/${caseId}/refresh`, {
+      const response = await fetch(getApiUrl(`/api/v1/ai/insights/${caseId}/refresh`), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -414,7 +415,7 @@ export default function CaseDetailPage() {
     if (!token || !caseId) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/ai/insights/${caseId}`, {
+      const response = await fetch(getApiUrl(`/api/v1/ai/insights/${caseId}`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
