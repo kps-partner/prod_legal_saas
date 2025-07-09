@@ -88,8 +88,16 @@ def exchange_code_for_tokens(code: str) -> Dict[str, Any]:
             'token_uri': token_url,
             'client_id': os.getenv("GOOGLE_CLIENT_ID"),
             'client_secret': os.getenv("GOOGLE_CLIENT_SECRET"),
-            'scopes': scopes
+            'scopes': scopes,
+            # Add expiry information if available
+            'expiry': token_data.get('expires_in')
         }
+        
+        # Validate that we have all required fields for token refresh
+        if not result['refresh_token']:
+            logger.warning("OAUTH WARNING: No refresh token received - user may need to re-authenticate")
+        if not result['client_id'] or not result['client_secret']:
+            logger.error("OAUTH ERROR: Missing client credentials for token refresh")
         
         logger.info(f"OAUTH DEBUG: Returning token data with refresh_token: {result['refresh_token'] is not None}")
         return result
@@ -407,6 +415,8 @@ def get_calendar_availability(firm_id: str, days: int = 60) -> List[Dict[str, An
             check_date = current_date + timedelta(days=day_offset)
             weekday_name = check_date.strftime("%A").lower()
             
+            logger.info(f"WEEKLY DEBUG: Processing {check_date} ({weekday_name}) - day offset {day_offset}")
+            
             # Check if date is blocked
             date_is_blocked = False
             for blocked_date in blocked_dates:
@@ -474,13 +484,31 @@ def get_calendar_availability(firm_id: str, days: int = 60) -> List[Dict[str, An
                         break
                 
                 if slot_is_free:
-                    logger.info(f"TIMEZONE DEBUG: Adding available slot - start_time: {slot_start} (type: {type(slot_start)})")
-                    logger.info(f"TIMEZONE DEBUG: Slot timezone info: {slot_start.tzinfo}")
-                    available_slots.append({
-                        'start_time': slot_start,
-                        'end_time': slot_end,
-                        'formatted_time': slot_start.strftime('%A, %B %d at %I:%M %p')
-                    })
+                    # Apply firm timezone to the slot times
+                    import pytz
+                    try:
+                        firm_tz = pytz.timezone(availability.timezone if availability else "America/Los_Angeles")
+                        # Convert naive datetime to timezone-aware
+                        slot_start_tz = firm_tz.localize(slot_start) if slot_start.tzinfo is None else slot_start.astimezone(firm_tz)
+                        slot_end_tz = firm_tz.localize(slot_end) if slot_end.tzinfo is None else slot_end.astimezone(firm_tz)
+                        
+                        logger.info(f"TIMEZONE DEBUG: Adding available slot - start_time: {slot_start_tz} (type: {type(slot_start_tz)})")
+                        logger.info(f"TIMEZONE DEBUG: Slot timezone info: {slot_start_tz.tzinfo}")
+                        
+                        available_slots.append({
+                            'start_time': slot_start_tz,
+                            'end_time': slot_end_tz,
+                            'formatted_time': slot_start_tz.strftime('%A, %B %d at %I:%M %p %Z')
+                        })
+                    except Exception as tz_error:
+                        logger.warning(f"Timezone conversion failed: {tz_error}, using naive datetime")
+                        logger.info(f"TIMEZONE DEBUG: Adding available slot - start_time: {slot_start} (type: {type(slot_start)})")
+                        logger.info(f"TIMEZONE DEBUG: Slot timezone info: {slot_start.tzinfo}")
+                        available_slots.append({
+                            'start_time': slot_start,
+                            'end_time': slot_end,
+                            'formatted_time': slot_start.strftime('%A, %B %d at %I:%M %p')
+                        })
                 
                 current_hour += 1
         

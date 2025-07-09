@@ -27,18 +27,29 @@ class GoogleTokenRefreshService:
     def __init__(self):
         self.db = get_database()
     
-    def create_credentials(self, access_token: str, refresh_token: str = None, 
+    def create_credentials(self, access_token: str, refresh_token: str = None,
                           scopes: list = None) -> Credentials:
         """Create Google credentials object from stored tokens."""
         if scopes is None:
             scopes = ["https://www.googleapis.com/auth/calendar"]
         
+        # Validate required OAuth fields
+        client_id = os.getenv("GOOGLE_CLIENT_ID")
+        client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+        
+        if not client_id or not client_secret:
+            logger.error("Missing required OAuth client credentials")
+            raise ValueError("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables")
+        
+        if not refresh_token:
+            logger.warning("Creating credentials without refresh token - token refresh will not be possible")
+        
         return Credentials(
             token=access_token,
             refresh_token=refresh_token,
             token_uri="https://oauth2.googleapis.com/token",
-            client_id=os.getenv("GOOGLE_CLIENT_ID"),
-            client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+            client_id=client_id,
+            client_secret=client_secret,
             scopes=scopes
         )
     
