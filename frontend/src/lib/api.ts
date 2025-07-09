@@ -10,6 +10,33 @@ console.log('  Final API_BASE_URL:', API_BASE_URL);
 console.log('  Final API_BASE_URL_WITH_VERSION:', API_BASE_URL_WITH_VERSION);
 console.log('  Environment:', process.env.NODE_ENV);
 
+// 🚨 DEPLOYMENT DIAGNOSIS: Check if API is reachable
+console.log('🚨 DEPLOYMENT DIAGNOSIS - Testing API connectivity...');
+if (typeof window !== 'undefined') {
+  fetch(`${API_BASE_URL}/api/v1/users/me`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('access_token') || 'no-token'}`
+    }
+  })
+  .then(response => {
+    console.log('🔍 API Test Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      ok: response.ok
+    });
+  })
+  .catch(error => {
+    console.error('❌ API Test Failed:', error);
+    console.log('🔍 Error Details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
+  });
+}
+
 // Utility function to detect client timezone
 export const getClientTimezone = (): string => {
   try {
