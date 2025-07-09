@@ -4,7 +4,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGO_URL = os.getenv("MONGO_DETAILS")
+# Support both MONGODB_URL (production) and MONGO_DETAILS (local development)
+MONGO_URL = os.getenv("MONGODB_URL") or os.getenv("MONGO_DETAILS")
+
+if not MONGO_URL:
+    raise ValueError("No MongoDB connection string found. Set either MONGODB_URL or MONGO_DETAILS environment variable.")
 
 client = MongoClient(MONGO_URL, tlsAllowInvalidCertificates=True)
 db = client.get_database("LawFirmOS")  # Or get_default_database() if you prefer
