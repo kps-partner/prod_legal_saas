@@ -368,15 +368,97 @@ def get_calendar_connection_status(firm_id: str) -> Dict[str, Any]:
 def get_calendar_availability(firm_id: str, days: int = 60) -> List[Dict[str, Any]]:
     """Get available time slots for a firm's calendar, respecting availability settings and blocked dates."""
     try:
-        logger.info(f"TIMEZONE DEBUG: Getting calendar availability for firm {firm_id}")
+        logger.info(f"PUBLIC AVAILABILITY DEBUG: Getting calendar availability for firm {firm_id}")
+        
+        # Get firm availability settings FIRST (before checking calendar connection)
+        from app.modules.availability.services import get_firm_availability, get_blocked_dates
+        availability = get_firm_availability(firm_id)
+        blocked_dates = get_blocked_dates(firm_id)
+        
+        # ENHANCED FIX: Create default availability settings if none exist
+        if not availability:
+            logger.info(f"PUBLIC AVAILABILITY DEBUG: No availability settings found for firm {firm_id}")
+            logger.info(f"PUBLIC AVAILABILITY DEBUG: Creating default Mon-Fri 9am-5pm availability settings")
+            
+            # Create default availability settings: Mon-Fri, 9am-5pm in firm's timezone
+            from app.core.db import get_database
+            db = get_database()
+            
+            # Get firm timezone
+            firm = db.firms.find_one({"_id": ObjectId(firm_id)})
+            firm_timezone = firm.get("timezone", "America/Los_Angeles") if firm else "America/Los_Angeles"
+            
+            default_settings = {
+                "firm_id": firm_id,
+                "weekly_schedule": {
+                    "monday": {
+                        "enabled": True,
+                        "start_time": "09:00",
+                        "end_time": "17:00"
+                    },
+                    "tuesday": {
+                        "enabled": True,
+                        "start_time": "09:00",
+                        "end_time": "17:00"
+                    },
+                    "wednesday": {
+                        "enabled": True,
+                        "start_time": "09:00",
+                        "end_time": "17:00"
+                    },
+                    "thursday": {
+                        "enabled": True,
+                        "start_time": "09:00",
+                        "end_time": "17:00"
+                    },
+                    "friday": {
+                        "enabled": True,
+                        "start_time": "09:00",
+                        "end_time": "17:00"
+                    },
+                    "saturday": {
+                        "enabled": False,
+                        "start_time": "09:00",
+                        "end_time": "17:00"
+                    },
+                    "sunday": {
+                        "enabled": False,
+                        "start_time": "09:00",
+                        "end_time": "17:00"
+                    }
+                },
+                "timezone": firm_timezone,
+                "slot_duration_minutes": 60,
+                "buffer_time_minutes": 15,
+                "advance_booking_days": 60,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+            
+            # Insert default settings into database
+            try:
+                result = db.availability_settings.insert_one(default_settings)
+                logger.info(f"PUBLIC AVAILABILITY DEBUG: Created default availability settings with ID: {result.inserted_id}")
+                
+                # Reload availability settings using the service
+                availability = get_firm_availability(firm_id)
+                logger.info(f"PUBLIC AVAILABILITY DEBUG: Reloaded availability settings after creation")
+                
+            except Exception as create_error:
+                logger.error(f"PUBLIC AVAILABILITY DEBUG: Failed to create default settings: {create_error}")
+                # If we can't create settings, return empty slots to be safe
+                return []
+        
+        # Now check calendar connection (after ensuring availability settings exist)
         connection = get_calendar_connection(firm_id)
         if not connection or not connection.calendar_id:
             raise Exception("No calendar connection found for this firm")
         
-        # Get firm availability settings
-        from app.modules.availability.services import get_firm_availability, get_blocked_dates
-        availability = get_firm_availability(firm_id)
-        blocked_dates = get_blocked_dates(firm_id)
+        logger.info(f"PUBLIC AVAILABILITY DEBUG: Found availability settings for firm {firm_id}")
+        if availability.weekly_schedule:
+            logger.info(f"PUBLIC AVAILABILITY DEBUG: Weekly schedule exists")
+        else:
+            logger.warning(f"PUBLIC AVAILABILITY DEBUG: No weekly schedule in availability settings")
         
         # Use enhanced token refresh service
         token_result = token_refresh_service.get_valid_credentials(firm_id)
@@ -415,7 +497,7 @@ def get_calendar_availability(firm_id: str, days: int = 60) -> List[Dict[str, An
             check_date = current_date + timedelta(days=day_offset)
             weekday_name = check_date.strftime("%A").lower()
             
-            logger.info(f"WEEKLY DEBUG: Processing {check_date} ({weekday_name}) - day offset {day_offset}")
+            logger.info(f"PUBLIC AVAILABILITY DEBUG: Processing {check_date} ({weekday_name}) - day offset {day_offset}")
             
             # Check if date is blocked
             date_is_blocked = False
@@ -434,26 +516,32 @@ def get_calendar_availability(firm_id: str, days: int = 60) -> List[Dict[str, An
                     continue
             
             if date_is_blocked:
+                logger.info(f"PUBLIC AVAILABILITY DEBUG: Skipping {check_date} - date is blocked")
                 continue
             
-            # Get availability settings for this day
+            # ENHANCED: Strict availability settings enforcement
+            day_schedule = None
             if availability and availability.weekly_schedule:
                 day_schedule = getattr(availability.weekly_schedule, weekday_name, None)
-                if not day_schedule or not day_schedule.enabled:
-                    continue
                 
-                # Parse business hours
-                try:
-                    start_hour, start_min = map(int, day_schedule.start_time.split(':'))
-                    end_hour, end_min = map(int, day_schedule.end_time.split(':'))
-                except (ValueError, AttributeError):
-                    # Fallback to default business hours if parsing fails
-                    start_hour, start_min = 9, 0
-                    end_hour, end_min = 17, 0
-            else:
-                # Fallback to default business hours (9 AM to 5 PM, weekdays only)
-                if check_date.weekday() >= 5:  # Skip weekends
-                    continue
+            # CRITICAL FIX: Only proceed if day is explicitly enabled
+            if not day_schedule or not day_schedule.enabled:
+                logger.info(f"PUBLIC AVAILABILITY DEBUG: Skipping {check_date} ({weekday_name}) - day not enabled in schedule")
+                logger.info(f"PUBLIC AVAILABILITY DEBUG: day_schedule exists: {day_schedule is not None}")
+                if day_schedule:
+                    logger.info(f"PUBLIC AVAILABILITY DEBUG: day_schedule.enabled: {day_schedule.enabled}")
+                continue
+            
+            logger.info(f"PUBLIC AVAILABILITY DEBUG: Processing {check_date} ({weekday_name}) - day is ENABLED")
+            
+            # Parse business hours from enabled day schedule
+            try:
+                start_hour, start_min = map(int, day_schedule.start_time.split(':'))
+                end_hour, end_min = map(int, day_schedule.end_time.split(':'))
+                logger.info(f"PUBLIC AVAILABILITY DEBUG: Business hours for {weekday_name}: {start_hour}:{start_min:02d} - {end_hour}:{end_min:02d}")
+            except (ValueError, AttributeError) as parse_error:
+                logger.warning(f"PUBLIC AVAILABILITY DEBUG: Failed to parse business hours for {weekday_name}: {parse_error}")
+                # Fallback to default business hours if parsing fails
                 start_hour, start_min = 9, 0
                 end_hour, end_min = 17, 0
             
